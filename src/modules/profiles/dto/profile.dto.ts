@@ -115,22 +115,26 @@ export class HoroscopeDto {
   @ApiPropertyOptional({ example: '1990-01-01T05:00:00.000Z' })
   @IsOptional() @IsString()
   timeOfBirth?: string;
-  
+
   @ApiPropertyOptional({ example: 'Mumbai' })
   @IsOptional() @IsString()
   placeOfBirth?: string;
-  
+
   @ApiPropertyOptional({ example: 'Makar' })
   @IsOptional() @IsString()
   rashi?: string;
-  
+
   @ApiPropertyOptional({ example: 'Ashwini' })
   @IsOptional() @IsString()
   nakshatra?: string;
-  
+
   @ApiPropertyOptional({ example: 'No' })
   @IsOptional() @IsString()
   manglikStatus?: string;
+
+  @ApiPropertyOptional({ example: 'https://storage.googleapis.com/bucket/horoscope.pdf' })
+  @IsOptional() @IsString()
+  documentUrl?: string;
 }
 
 export class UpdateProfileDto {

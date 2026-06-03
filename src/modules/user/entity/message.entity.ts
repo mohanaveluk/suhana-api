@@ -24,8 +24,11 @@ export class Message {
   @Column({ type: 'text' })
   content: string;
 
-  @Column({ type: 'enum', enum: ['text', 'icebreaker', 'system'], default: 'text' })
+  @Column({ type: 'enum', enum: ['text', 'icebreaker', 'system', 'attachment'], default: 'text' })
   type: string;
+
+  @Column({ type: 'text', nullable: true })
+  attachmentUrl: string;
 
   @Column({ default: false })
   isRead: boolean;

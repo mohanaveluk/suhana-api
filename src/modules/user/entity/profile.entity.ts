@@ -123,6 +123,7 @@ export class Profile {
     rashi?: string;
     nakshatra?: string;
     manglikStatus?: string;
+    documentUrl?: string;
   };
 
   @Column({ type: 'enum', enum: ['everyone', 'mutual_matches', 'premium_only', 'on_request'], default: 'everyone' })
@@ -136,6 +137,9 @@ export class Profile {
 
   @Column({ nullable: true })
   videoIntroUrl: string;
+
+  @Column({ nullable: true })
+  horoscopeDocUrl: string;
 
   @Column({ default: '', name: 'profile_code', unique: true, nullable: false, length: 9 })
   profileCode: string;

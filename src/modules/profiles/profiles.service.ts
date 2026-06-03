@@ -24,6 +24,7 @@ export class ProfilesService {
 
     const qb = this.profileRepo.createQueryBuilder('p')
       .leftJoinAndSelect('p.photos', 'photos')
+      .leftJoinAndSelect('p.user', 'u')
       .where('p.status = :status', { status: 'active' });
 
     if (search.gender) qb.andWhere('p.gender = :gender', { gender: search.gender });
@@ -52,7 +53,7 @@ export class ProfilesService {
   async findById(id: string) {
     const profile = await this.profileRepo.findOne({
       where: { id },
-      relations: ['photos'],
+      relations: ['photos', 'user'],
     });
     if (!profile) throw new NotFoundException('Profile not found');
     return this.toProfileResponse(profile);
@@ -101,12 +102,14 @@ export class ProfilesService {
     user.profile.familyPreferenceNote = dto.familyDetails?.familyPreferenceNote || user.profile.familyPreferenceNote;
 
     user.profile.horoscope = {
-      timeOfBirth: dto.horoscope?.timeOfBirth || user.profile.horoscope.timeOfBirth,
-      placeOfBirth: dto.horoscope?.placeOfBirth || user.profile.horoscope.placeOfBirth,
-      rashi: dto.horoscope?.rashi || user.profile.horoscope.rashi,
-      nakshatra: dto.horoscope?.nakshatra || user.profile.horoscope.nakshatra,
-      manglikStatus: dto.horoscope?.manglikStatus || user.profile.horoscope.manglikStatus,
+      timeOfBirth: dto.horoscope?.timeOfBirth || user.profile.horoscope?.timeOfBirth,
+      placeOfBirth: dto.horoscope?.placeOfBirth || user.profile.horoscope?.placeOfBirth,
+      rashi: dto.horoscope?.rashi || user.profile.horoscope?.rashi,
+      nakshatra: dto.horoscope?.nakshatra || user.profile.horoscope?.nakshatra,
+      manglikStatus: dto.horoscope?.manglikStatus || user.profile.horoscope?.manglikStatus,
+      documentUrl: dto.horoscope?.documentUrl || user.profile.horoscope?.documentUrl,
     };
+    user.profile.horoscopeDocUrl = dto.horoscope?.documentUrl || user.profile.horoscopeDocUrl;
 
     user.profile.profileCompleteness = this.calculateCompleteness(user.profile);
     const saved = await this.profileRepo.save(user.profile);
@@ -162,6 +165,21 @@ export class ProfilesService {
     }
   }
 
+  async uploadHoroscopeDocument(userId: string, file: Express.Multer.File): Promise<{ message: string; url: string }> {
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+      relations: ['profile'],
+    });
+    if (!user?.profile) throw new NotFoundException('Profile not found');
+
+    await this.cloudStorageService.isFileValid(file);
+
+    const folder = `matrimony/horoscope/${user.profile.id}`;
+    const url = await this.cloudStorageService.uploadFile(file, folder);
+
+    return { message: 'Horoscope document uploaded successfully', url };
+  }
+
   async deletePhoto(userId: string, photoId: string) {
     const result = await this.photoRepo.delete(photoId);
     if (result.affected === 0) throw new NotFoundException('Photo not found');
@@ -200,6 +218,7 @@ export class ProfilesService {
 
   private toProfileResponse(profile: Profile) {
     return {
+      user: profile.user,
       userId: profile.id,
       firstName: profile.firstName,
       lastName: profile.lastName,
@@ -244,6 +263,7 @@ export class ProfilesService {
       },
       preferences: profile.preferences,
       horoscope: profile.horoscope,
+      horoscopeDocUrl: profile.horoscopeDocUrl,
       photos: (profile.photos || []).map((ph) => ({
         id: ph.id,
         url: ph.url,

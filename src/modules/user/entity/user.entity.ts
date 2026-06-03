@@ -4,6 +4,8 @@ import { RoleEntity } from './roles.entity';
 import { UserLoginHistory } from 'src/modules/auth/entity/user-login-history.entity';
 import { RefreshToken } from './refresh-token.entity';
 import { Profile } from './profile.entity';
+import { on } from 'events';
+import { UserSubscription } from './user-subscription.entity';
 
 @Entity('user')
 export class User {
@@ -89,7 +91,6 @@ export class User {
   @Column({ length: 100, nullable: true })
   country: string;
 
-
   @OneToMany(() => PasswordArchive, passwordArchive => passwordArchive.user)
   password_history: PasswordArchive[];
 
@@ -103,5 +104,8 @@ export class User {
   @OneToOne(() => Profile, (profile) => profile.user, { cascade: true, eager: true })
   @JoinColumn()
   profile: Profile;
+
+  @OneToMany(() => UserSubscription, subscription => subscription.user)
+  subscriptions: UserSubscription[];
 
 }

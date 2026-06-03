@@ -5,3 +5,6 @@ export { Match } from './match.entity';
 export { Conversation } from './conversation.entity';
 export { Message } from './message.entity';
 export { PremiumPlan } from './premium-plan.entity';
+export { UserBlock } from './user-block.entity';
+export { UserReport } from './user-report.entity';
+export { UserSubscription } from './user-subscription.entity';

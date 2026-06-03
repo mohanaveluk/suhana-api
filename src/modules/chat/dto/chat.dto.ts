@@ -16,3 +16,8 @@ export class StartConversationDto {
   @IsNotEmpty() @IsString()
   receiverId: string;
 }
+
+export class TypingDto {
+  @ApiProperty({ description: 'Whether the user is currently typing' })
+  isTyping: boolean;
+}

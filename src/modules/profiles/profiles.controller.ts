@@ -6,13 +6,15 @@ import {
   ParseFilePipe,
   FileTypeValidator,
   MaxFileSizeValidator,
+  BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { ProfilesService } from './profiles.service';
 import { UpdateProfileDto, SearchProfilesDto } from './dto/profile.dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { maxFileSize } from 'src/shared/utils/file-validation.util';
 
 @ApiTags('profiles')
@@ -87,6 +89,22 @@ export class ProfilesController {
     file: Express.Multer.File,
   ) {
     return this.profilesService.uploadProfileImage(req.user.id, file);
+  }
+
+  @Post('horoscope/document')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Upload horoscope document (image or PDF)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } } })
+  @ApiResponse({ status: 201, description: 'Document uploaded, returns URL' })
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  async uploadHoroscopeDocument(
+    @Request() req: any,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('No file provided');
+    return this.profilesService.uploadHoroscopeDocument(req.user.id, file);
   }
 
   @Delete('me/photos/:photoId')

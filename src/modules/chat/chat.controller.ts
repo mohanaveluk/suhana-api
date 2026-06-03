@@ -12,6 +12,8 @@ import {
     Req,
     Request,
     Patch,
+    UseInterceptors,
+    UploadedFile,
 } from '@nestjs/common';
 import {
     ApiTags,
@@ -21,13 +23,17 @@ import {
     ApiQuery,
     ApiBearerAuth,
     ApiBody,
+    ApiConsumes,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { Request as ExpRequest } from 'express';
 import { ResponseDto } from 'src/common/dto/response.dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { CloudStorageService } from 'src/common/services/cloud-storage.service';
 import Anthropic from "@anthropic-ai/sdk";
 import { ChatService } from './chat.service';
-import { SendMessageDto, StartConversationDto } from './dto/chat.dto';
+import { SendMessageDto, StartConversationDto, TypingDto } from './dto/chat.dto';
 
 
 @ApiTags('chat')
@@ -36,9 +42,9 @@ import { SendMessageDto, StartConversationDto } from './dto/chat.dto';
 @UseGuards(JwtAuthGuard)
 export class ChatController {
     constructor(
-        // Inject any required services here, e.g., ChatService
-        private readonly anthropic: Anthropic, // Replace with actual type of the service
-        private readonly chatService: ChatService
+        private readonly anthropic: Anthropic,
+        private readonly chatService: ChatService,
+        private readonly cloudStorageService: CloudStorageService,
     ) { }
 
     @Post('request')
@@ -118,6 +124,45 @@ export class ChatController {
     @ApiOperation({ summary: 'Mark all messages as read in a conversation' })
     markAsRead(@Param('id') id: string, @Request() req: any) {
         return this.chatService.markAsRead(id, req.user.id);
+    }
+
+    @Post('conversations/:id/attachments')
+    @ApiOperation({ summary: 'Send a file attachment in a conversation' })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } } })
+    @ApiResponse({ status: 201, description: 'Attachment sent' })
+    @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+    async sendAttachment(
+        @Param('id') id: string,
+        @Request() req: any,
+        @UploadedFile() file: Express.Multer.File,
+    ) {
+        if (!file) throw new BadRequestException('No file provided');
+        await this.cloudStorageService.isFileValid(file);
+        const url = await this.cloudStorageService.uploadFile(file, 'chat-attachments');
+        return this.chatService.sendAttachment(id, req.user.id, url);
+    }
+
+    @Get('conversations/:id/typing')
+    @ApiOperation({ summary: 'Get partner typing status' })
+    @ApiResponse({ status: 200, description: 'Typing status' })
+    getTypingIndicator(@Param('id') id: string, @Request() req: any) {
+        return this.chatService.getTyping(id, req.user.id);
+    }
+
+    @Post('conversations/:id/typing')
+    @ApiOperation({ summary: 'Send typing indicator' })
+    @ApiResponse({ status: 200, description: 'Typing indicator acknowledged' })
+    sendTypingIndicator(@Param('id') id: string, @Request() req: any, @Body() dto: TypingDto) {
+        return this.chatService.setTyping(id, req.user.id, dto.isTyping);
+    }
+
+    @Delete('conversations/:id/messages/:messageId')
+    @ApiOperation({ summary: 'Delete a message (sender only)' })
+    @ApiResponse({ status: 200, description: 'Message deleted' })
+    @ApiResponse({ status: 403, description: 'Cannot delete another user\'s message' })
+    deleteMessage(@Param('id') id: string, @Param('messageId') messageId: string, @Request() req: any) {
+        return this.chatService.deleteMessage(id, messageId, req.user.id);
     }
 
     @Get('icebreakers')

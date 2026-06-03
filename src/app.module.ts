@@ -20,6 +20,8 @@ import { PremiumModule } from './modules/premium/premium.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { GalleryModule } from './modules/gallery/gallery.module';
+import { InterestsModule } from './modules/interests/interests.module';
+import { CallsModule } from './modules/calls/calls.module';
 
 
 @Module({
@@ -37,11 +39,13 @@ import { GalleryModule } from './modules/gallery/gallery.module';
     CommonModule,
     AuthModule,
     AuditModule,
-    UserModule,
-    ContactModule,
-    ChatModule,
     BlogModule,
+    ContactModule,
+    CallsModule,
+    ChatModule,
     CountryModule,
+    GalleryModule,
+    InterestsModule,
     ProfilesModule,
     MatchesModule,
     ShortlistModule,
@@ -49,7 +53,7 @@ import { GalleryModule } from './modules/gallery/gallery.module';
     PremiumModule,
     AdminModule,
     SettingsModule,
-    GalleryModule,
+    UserModule,
   ],
   controllers: [AppController],
   providers: [AppService],
