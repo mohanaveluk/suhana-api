@@ -10,12 +10,12 @@ import { UserRepository } from './user.repository';
 import { AuditInterceptor } from '../audit/audit.interceptor';
 import { AuditRepository } from '../audit/audit.repository';
 import { RoleEntity } from './entity/roles.entity';
-import { User } from './entity';
+import { User, UserBlock, UserReport } from './entity';
 
 @Module({
-  
+
   imports: [
-    TypeOrmModule.forFeature([User, RoleEntity]),
+    TypeOrmModule.forFeature([User, RoleEntity, UserBlock, UserReport]),
     HttpModule,
     CommonModule,
   ],

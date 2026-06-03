@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Match, Profile, User } from '../user/entity';
+import { Interest } from '../interests/entity/interest.entity';
 
 @Injectable()
 export class MatchesService {
@@ -9,6 +10,7 @@ export class MatchesService {
     @InjectRepository(Match) private readonly matchRepo: Repository<Match>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Profile) private readonly profileRepo: Repository<Profile>,
+    @InjectRepository(Interest) private readonly interestRepo: Repository<Interest>,
   ) {}
 
   async generateMatches(userId: string, count = 4) {
@@ -20,10 +22,10 @@ export class MatchesService {
 
     const oppositeGender = user.gender === 'bride' ? 'groom' : 'bride';
 
-    // Find candidate profiles
+    // Find candidate profiles — leftJoinAndSelect 'p.user' so candidate.user.id is available
     const candidates = await this.profileRepo.createQueryBuilder('p')
       .leftJoinAndSelect('p.photos', 'photos')
-      .leftJoin('p.user', 'u')
+      .leftJoinAndSelect('p.user', 'u')
       .where('p.gender = :gender', { gender: oppositeGender })
       .andWhere('p.status = :status', { status: 'active' })
       .andWhere('u.id != :userId', { userId })
@@ -31,13 +33,15 @@ export class MatchesService {
       .take(count)
       .getMany();
 
-    const matches: Match[] = [];
+    const matchIds: string[] = [];
     for (const candidate of candidates) {
+      // candidate.user.id is the FK that matchedUserId references (User.id, not Profile.id)
+      const candidateUserId = candidate.user.id;
       const compatibility = this.computeCompatibility(user.profile, candidate);
 
       // Check if match already exists
       const existing = await this.matchRepo.findOne({
-        where: { userId, matchedUserId: candidate.id },
+        where: { userId, matchedUserId: candidateUserId },
       });
 
       if (existing) {
@@ -45,23 +49,31 @@ export class MatchesService {
         existing.compatibilityBreakdown = compatibility.breakdown;
         existing.explanationText = compatibility.explanation;
         existing.badges = compatibility.badges;
-        await this.matchRepo.save(existing);
-        matches.push(existing);
+        const saved = await this.matchRepo.save(existing);
+        matchIds.push(saved.id);
       } else {
         const match = this.matchRepo.create({
           userId,
-          matchedUserId: candidate.id,
+          matchedUserId: candidateUserId,
           matchPercentage: compatibility.total,
           compatibilityBreakdown: compatibility.breakdown,
           explanationText: compatibility.explanation,
           badges: compatibility.badges,
           status: 'suggested',
         });
-        matches.push(await this.matchRepo.save(match));
+        const saved = await this.matchRepo.save(match);
+        matchIds.push(saved.id);
       }
     }
 
-    return this.formatMatches(matches);
+    // Re-fetch saved matches with full relations so formatMatches has profile data
+    const matchesWithRelations = await this.matchRepo.find({
+      where: { id: In(matchIds) },
+      relations: ['matchedUser', 'matchedUser.profile', 'matchedUser.profile.photos'],
+      order: { matchPercentage: 'DESC' },
+    });
+
+    return this.formatMatches(matchesWithRelations);
   }
 
   async getMatches(userId: string) {
@@ -72,6 +84,16 @@ export class MatchesService {
     });
     return this.formatMatches(matches);
   }
+
+  async getMatcheByUsers(userId: string, matchedUserId: string) {
+    const match = await this.matchRepo.findOne({
+      where: { userId, matchedUserId },
+      relations: ['matchedUser', 'matchedUser.profile', 'matchedUser.profile.photos'],
+      order: { matchPercentage: 'DESC' },
+    });
+    return this.formatMatch(match);
+  }
+
 
   async getMatchById(id: string) {
     const match = await this.matchRepo.findOne({
@@ -91,7 +113,24 @@ export class MatchesService {
     if (status === 'interested') match.currentStep = Math.max(match.currentStep, 2);
     if (status === 'connected') match.currentStep = 3;
 
-    return this.matchRepo.save(match);
+    const response = await this.matchRepo.save(match);
+
+    const interest = await this.interestRepo.findOne({
+      where: [
+        { fromUserId: response.userId, toUserId: response.matchedUserId },
+        { fromUserId: response.matchedUserId, toUserId: response.userId }]
+    });
+    
+    if(!interest){
+      const newInterest =  this.interestRepo.create({
+        fromUserId: response.userId, 
+        toUserId: response.matchedUserId,
+        message: 'I would love to connect and get to know you better. Looking forward to hearing from you!'
+      });
+      this.interestRepo.save(newInterest);
+    }
+
+    return response;
   }
 
   private computeCompatibility(userProfile: Profile, candidate: Profile) {
@@ -161,6 +200,7 @@ export class MatchesService {
   private formatMatch(match: Match) {
     const profile = match.matchedUser?.profile;
     return {
+      user: match.matchedUser,
       id: match.id,
       matchPercentage: match.matchPercentage,
       compatibilityBreakdown: match.compatibilityBreakdown,
@@ -169,6 +209,8 @@ export class MatchesService {
       status: match.status,
       currentStep: match.currentStep,
       suggestedAt: match.suggestedAt,
+      matchedUserId: match.matchedUserId,
+      userId: match.matchedUserId,
       profile: profile ? {
         userId: profile.id,
         firstName: profile.firstName,

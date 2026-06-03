@@ -1,13 +1,21 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DeepPartial } from 'typeorm';
-import { PremiumPlan, User } from '../user/entity';
+import { PremiumPlan, User, UserSubscription } from '../user/entity';
 
 @Injectable()
 export class PremiumService {
+  private readonly tierDurationMonths: Record<string, number | null> = {
+    free: null,
+    silver: 3,
+    gold: 6,
+    platinum: 12,
+  };
+
   constructor(
     @InjectRepository(PremiumPlan) private readonly planRepo: Repository<PremiumPlan>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
+    @InjectRepository(UserSubscription) private readonly subscriptionRepo: Repository<UserSubscription>,
   ) {}
 
   async getPlans() {
@@ -30,6 +38,21 @@ export class PremiumService {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
+    // Expire any currently active subscription
+    await this.subscriptionRepo.update({ userId, status: 'active' }, { status: 'expired' });
+
+    const startDate = new Date();
+    const months = this.tierDurationMonths[plan.tier];
+    let endDate: Date | null = null;
+    if (months !== null) {
+      endDate = new Date(startDate);
+      endDate.setMonth(endDate.getMonth() + months);
+    }
+
+    const subscription = await this.subscriptionRepo.save(
+      this.subscriptionRepo.create({ userId, planId, tier: plan.tier, status: 'active', startDate, endDate }),
+    );
+
     user.membership = plan.tier;
     await this.userRepo.save(user);
 
@@ -37,6 +60,7 @@ export class PremiumService {
       message: `Successfully subscribed to ${plan.name} plan`,
       membership: plan.tier,
       plan,
+      subscription,
     };
   }
 

@@ -103,25 +103,59 @@ export class CloudStorageService {
   }
 
   async isFileValid(file: Express.Multer.File): Promise<boolean> {
-    const allowedMimeTypes = [
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'image/gif',
-      'image/webp',
+    const fileCategories: { label: string; mimeTypes: string[]; maxMb: number }[] = [
+      {
+        label: 'image',
+        mimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
+        maxMb: 5,
+      },
+      {
+        label: 'document',
+        mimeTypes: [
+          'text/plain',
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'application/vnd.ms-powerpoint',
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        ],
+        maxMb: 10,
+      },
+      {
+        label: 'archive',
+        mimeTypes: [
+          'application/zip',
+          'application/x-zip-compressed',
+          'application/x-rar-compressed',
+          'application/x-7z-compressed',
+          'application/x-tar',
+          'application/gzip',
+        ],
+        maxMb: 50,
+      },
+      {
+        label: 'audio',
+        mimeTypes: ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/flac', 'audio/mp4', 'audio/x-m4a'],
+        maxMb: 50,
+      },
+      {
+        label: 'video',
+        mimeTypes: ['video/mp4', 'video/avi', 'video/quicktime', 'video/x-matroska', 'video/webm', 'video/x-ms-wmv', 'video/x-flv'],
+        maxMb: 200,
+      },
     ];
 
-    const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
-
-    if (!allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException(
-        'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.'
-      );
+    const matched = fileCategories.find((c) => c.mimeTypes.includes(file.mimetype));
+    if (!matched) {
+      throw new BadRequestException(`File type '${file.mimetype}' is not allowed.`);
     }
 
-    if (file.size > maxSizeInBytes) {
+    const maxBytes = matched.maxMb * 1024 * 1024;
+    if (file.size > maxBytes) {
       throw new BadRequestException(
-        'File size too large. Maximum size is 5MB.'
+        `File too large. Maximum size for ${matched.label} files is ${matched.maxMb}MB.`,
       );
     }
 

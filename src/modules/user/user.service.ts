@@ -2,11 +2,11 @@
 https://docs.nestjs.com/providers#services
 */
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserRepository } from './user.repository';
-import { User } from './entity';
+import { User, UserBlock, UserReport } from './entity';
 import { RoleEntity } from './entity/roles.entity';
 
 @Injectable()
@@ -16,7 +16,11 @@ export class UserService {
         @InjectRepository(User)
         private readonly userRepo: Repository<User>,
         @InjectRepository(RoleEntity)
-        private readonly rolsepository: Repository<RoleEntity>
+        private readonly rolsepository: Repository<RoleEntity>,
+        @InjectRepository(UserBlock)
+        private readonly blockRepo: Repository<UserBlock>,
+        @InjectRepository(UserReport)
+        private readonly reportRepo: Repository<UserReport>,
     ){    }
 
     async validateAccount(uniqueId) {
@@ -65,6 +69,42 @@ export class UserService {
     const result = await this.userRepo.delete(id);
     if (result.affected === 0) throw new NotFoundException('User not found');
     return { message: 'User deleted successfully' };
+  }
+
+  async heartbeat(userId: string) {
+    await this.userRepo.update({ id: userId }, { last_active: new Date() });
+    return { online: true };
+  }
+
+  async getStatus(userId: string) {
+    const user = await this.userRepo.findOne({ where: { id: userId }, select: ['id', 'last_active'] });
+    if (!user) throw new NotFoundException('User not found');
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const isOnline = user.last_active ? user.last_active > fiveMinutesAgo : false;
+    return { userId, isOnline, lastActive: user.last_active };
+  }
+
+  async getPhone(targetUserId: string) {
+    const user = await this.userRepo.findOne({ where: { id: targetUserId }, select: ['id', 'mobile'] });
+    if (!user) throw new NotFoundException('User not found');
+    return { userId: targetUserId, mobile: user.mobile };
+  }
+
+  async blockUser(blockedByUserId: string, blockedUserId: string) {
+    if (blockedByUserId === blockedUserId) throw new BadRequestException('Cannot block yourself');
+    const existing = await this.blockRepo.findOne({ where: { blockedByUserId, blockedUserId } });
+    if (existing) return { message: 'User already blocked' };
+    const block = this.blockRepo.create({ blockedByUserId, blockedUserId });
+    await this.blockRepo.save(block);
+    return { message: 'User blocked successfully' };
+  }
+
+  async reportUser(reportedByUserId: string, reportedUserId: string, reason: string) {
+    if (reportedByUserId === reportedUserId) throw new BadRequestException('Cannot report yourself');
+    if (!reason?.trim()) throw new BadRequestException('Reason is required');
+    const report = this.reportRepo.create({ reportedByUserId, reportedUserId, reason: reason.trim() });
+    await this.reportRepo.save(report);
+    return { message: 'User reported successfully' };
   }
 
 }

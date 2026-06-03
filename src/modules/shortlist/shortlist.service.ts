@@ -33,6 +33,27 @@ export class ShortlistService {
     });
   }
 
+  async shortlistUser(userId: string, matchedUserId: string) {
+    const match = await this.matchRepo.findOne({
+      where: { userId, matchedUserId },
+      relations: ['matchedUser', 'matchedUser.profile', 'matchedUser.profile.photos'],
+    });
+    if (!match) {
+      // If no existing match, create a new one with 'shortlisted' status
+      const newMatch = this.matchRepo.create({
+        userId: userId, // This should be set to the current user's ID in a real implementation
+        matchedUserId: matchedUserId,
+        matchPercentage: 0,
+        status: 'shortlisted',
+        currentStep: 1,
+      });
+      return this.matchRepo.save(newMatch);
+    }
+    match.status = 'shortlisted';
+    match.currentStep = Math.max(match.currentStep, 1);
+    return this.matchRepo.save(match);
+  }
+
   async shortlist(matchId: string) {
     return this.updateMatchStatus(matchId, 'shortlisted');
   }

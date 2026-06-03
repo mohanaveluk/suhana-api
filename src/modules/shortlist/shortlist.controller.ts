@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Patch, Param, UseGuards, Request, Post } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { ShortlistService } from './shortlist.service';
@@ -28,6 +28,13 @@ export class ShortlistController {
   @ApiOperation({ summary: 'Get all connected profiles' })
   getConnected(@Request() req: any) {
     return this.shortlistService.getConnected(req.user.id);
+  }
+
+  @Post('user/:matchedUserId')
+  @ApiOperation({ summary: 'Shortlist a profile' })
+  @ApiResponse({ status: 200, description: 'Profile shortlisted' })
+  shortlistByUser(@Request() req: any,@Param('matchedUserId') matchedUserId: string) {
+    return this.shortlistService.shortlistUser(req.user.id, matchedUserId);
   }
 
   @Patch(':id/shortlist')
