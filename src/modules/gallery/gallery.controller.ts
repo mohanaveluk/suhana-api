@@ -62,7 +62,8 @@ export class GalleryController {
   @ApiResponse({ status: 401, description: 'Unauthorized — JWT token missing or invalid' })
   @ApiResponse({ status: 500, description: 'Internal server error during upload' })
   uploadGalleryImage(
-    @Param('profileId', ParseUUIDPipe) profileId: string,
+    @Param('profileId') profileId: string,
+    //@Param('profileId', ParseUUIDPipe) profileId: string,
     @Request() req: any,
     @UploadedFile(
       new ParseFilePipe({
@@ -95,7 +96,8 @@ export class GalleryController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   getGalleryByProfileId(
-    @Param('profileId', ParseUUIDPipe) profileId: string,
+    //@Param('profileId', ParseUUIDPipe) profileId: string,
+    @Param('profileId') profileId: string,
   ): Promise<GalleryListResponseDto> {
     return this.galleryService.getGalleryByProfileId(profileId);
   }

@@ -101,6 +101,18 @@ export class Profile {
   @Column({ nullable: true })
   familyPreferenceNote: string;
 
+  @Column({ type: 'simple-array', nullable: true }) //['travel', 'cooking', 'music']
+  interests: string[]; // Stored as JSON array
+
+  @Column({ type: 'simple-array', nullable: true }) // ['non-smoker', 'vegetarian', 'early riser']
+  lifestyleHabits: string[];
+
+  @Column({ nullable: true }) // 'introvert' | 'extrovert' | 'ambivert'
+  personalityType: string
+
+  @Column({ type: 'simple-array', nullable: true }) // ['supportive', 'career-oriented', 'family-focused']
+  partnerExpectations: string[]
+
   // Preferences (stored as JSON)
   @Column({ type: 'json', nullable: true })
   preferences: {
