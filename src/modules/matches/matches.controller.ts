@@ -33,7 +33,14 @@ export class MatchesController {
   @ApiOperation({ summary: 'Get all matches for the current user' })
   @ApiResponse({ status: 200, description: 'List of matches' })
   getMatcheByUser(@Request() req: any, @Param('matchUserId') matchUserId: string) {
-    return this.matchesService.getMatcheByUsers(req.user.id, matchUserId);
+    return this.matchesService.getMatchesByUsers(req.user.id, matchUserId);
+  }
+
+  @Get('userx/:matchUserId')
+  @ApiOperation({ summary: 'Get all matches for the current user' })
+  @ApiResponse({ status: 200, description: 'List of matches' })
+  getAIMatchesByUser(@Request() req: any, @Param('matchUserId') matchUserId: string) {
+    return this.matchesService.getAIMatchesByUsers(req.user.id, matchUserId);
   }
 
   @Get(':id')

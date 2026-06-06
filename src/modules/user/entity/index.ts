@@ -8,3 +8,4 @@ export { PremiumPlan } from './premium-plan.entity';
 export { UserBlock } from './user-block.entity';
 export { UserReport } from './user-report.entity';
 export { UserSubscription } from './user-subscription.entity';
+export { HoroscopeCompatibilityReport } from './horoscope-compatibility-report.entity';
