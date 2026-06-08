@@ -267,6 +267,10 @@ export class SearchProfilesDto {
   @IsOptional() @IsString()
   educationLevel?: string;
 
+  @ApiPropertyOptional({ example: 'active' })
+  @IsOptional() @IsString()
+  status?: string;
+
   @ApiPropertyOptional({ example: 1, description: 'Page number' })
   @IsOptional() @IsNumber() @Type(() => Number) @Min(1)
   page?: number;

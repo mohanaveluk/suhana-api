@@ -37,12 +37,29 @@ export class ProfilesController {
     return this.profilesService.findByUserId(req.user.id);
   }
 
+  @Get('admx/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get profile by ID' })
+  getAdminProfile(@Request() req: any, @Param('id') id: string) {
+    return this.profilesService.findByUserId(id);
+  }
+  
+
   @Get(':id')
   @ApiOperation({ summary: 'Get profile by ID' })
   @ApiResponse({ status: 200, description: 'Profile found' })
   @ApiResponse({ status: 404, description: 'Profile not found' })
   findById(@Param('id') id: string) {
     return this.profilesService.findById(id);
+  }
+
+  @Get('code/:id')
+  @ApiOperation({ summary: 'Get profile by code' })
+  @ApiResponse({ status: 200, description: 'Profile found' })
+  @ApiResponse({ status: 404, description: 'Profile not found' })
+  findByCode(@Param('id') id: string) {
+    return this.profilesService.findByCode(id);
   }
 
   @Patch('new')
@@ -57,6 +74,14 @@ export class ProfilesController {
   @ApiOperation({ summary: 'Update current user profile' })
   updateProfile(@Request() req: any, @Body() dto: UpdateProfileDto) {
     return this.profilesService.update(req.user.id, dto);
+  }
+
+  @Patch('admx/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update current user profile' })
+  updateProfileByAdmx(@Request() req: any, @Param('id') id: string, @Body() dto: UpdateProfileDto) {
+    return this.profilesService.update(id, dto);
   }
 
   @Post('me/photos')
@@ -114,4 +139,50 @@ export class ProfilesController {
   deletePhoto(@Request() req: any, @Param('photoId') photoId: string) {
     return this.profilesService.deletePhoto(req.user.id, photoId);
   }
+
+
+  //Admin
+
+  @Post('profile/admx/image/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Upload profile image' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 200, description: 'Image uploaded successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid file type or size' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadProfileAdmxImage(
+    @Request() req,
+    @Param('id') id: string,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: maxFileSize }),
+          new FileTypeValidator({ fileType: /(jpg|jpeg|png)$/ }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+  ) {
+    return this.profilesService.uploadProfileImage(id, file);
+  }  
+
+  @Post('horoscope/admx/document/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Upload horoscope document (image or PDF)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } } })
+  @ApiResponse({ status: 201, description: 'Document uploaded, returns URL' })
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  async uploadHoroscopeDocumentAdmx(
+    @Request() req: any,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('No file provided');
+    return this.profilesService.uploadHoroscopeDocument(id, file);
+  }
+
 }

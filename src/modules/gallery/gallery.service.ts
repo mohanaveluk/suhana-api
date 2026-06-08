@@ -136,6 +136,32 @@ export class GalleryService {
     }
   }
 
+
+
+  // ── Fetch Single for public access ────────────────────────────────────────────────────────
+
+  async getGalleryViewById(profileId: string): Promise<GalleryListResponseDto> {
+    try {
+      const images = await this.galleryRepo.find({
+        where: { profileId, isDeleted: false },
+        order: { createdAt: 'DESC' },
+      });
+
+      const gallary = images.length > 4 ? images.slice(0, 4) : images;
+
+      return {
+        success: true,
+        message: 'Gallery images fetched successfully',
+        data:    gallary.map((g) => this.toItemDto(g)),
+        total:   gallary.length,
+      };
+    } catch (err) {
+      throw new InternalServerErrorException(
+        `Failed to fetch gallery images: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      );
+    }
+  }
+
   // ── Soft Delete ────────────────────────────────────────────────────────────
 
   async deleteGalleryImage(id: string): Promise<GalleryDeleteResponseDto> {

@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, Matches, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, Matches, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateContactDto {
@@ -57,6 +57,6 @@ export class CreateContactDto {
     example: 'I would like to inquire about your services...',
     description: 'Message subject',
   })
-  @IsNotEmpty()
+  @IsOptional()
   subject: string;
 }
