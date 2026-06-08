@@ -93,18 +93,20 @@ export class UserService {
   async blockUser(blockedByUserId: string, blockedUserId: string) {
     if (blockedByUserId === blockedUserId) throw new BadRequestException('Cannot block yourself');
     const existing = await this.blockRepo.findOne({ where: { blockedByUserId, blockedUserId } });
-    if (existing) return { message: 'User already blocked' };
+    if (existing) return { status: 'error', message: 'User already blocked' };
     const block = this.blockRepo.create({ blockedByUserId, blockedUserId });
     await this.blockRepo.save(block);
-    return { message: 'User blocked successfully' };
+    return { status: 'success', message: 'User blocked successfully' };
   }
 
   async reportUser(reportedByUserId: string, reportedUserId: string, reason: string) {
     if (reportedByUserId === reportedUserId) throw new BadRequestException('Cannot report yourself');
     if (!reason?.trim()) throw new BadRequestException('Reason is required');
+    const reportedUser = await this.reportRepo.findOne({ where: { reportedUserId } });
+    if (reportedUser) return { status: 'error', message: 'User reported already!' };
     const report = this.reportRepo.create({ reportedByUserId, reportedUserId, reason: reason.trim() });
     await this.reportRepo.save(report);
-    return { message: 'User reported successfully' };
+    return { status: 'success', message: 'Report submitted. Our team will review it shortly.' };
   }
 
 }

@@ -33,6 +33,7 @@ import {
 } from './dto/gallery-response.dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { maxFileSize } from 'src/shared/utils/file-validation.util';
+import { Public } from 'src/common/decorators/public.decorator';
 
 @ApiTags('gallery')
 @ApiBearerAuth('JWT-auth')
@@ -122,6 +123,31 @@ export class GalleryController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<GalleryResponseDto> {
     return this.galleryService.getGalleryById(id);
+  }
+
+
+  // ── GET /gallery/:id PUBLIC──────────────────────────────────────────────────────
+
+  @Get('profile/view/:profileId')
+  @Public()
+  @ApiOperation({
+    summary: 'Get gallery images for a profile',
+    description: 'Returns all active (non-deleted) gallery images for the given profile, sorted latest first.',
+  })
+  @ApiParam({
+    name: 'profileId',
+    type: 'string',
+    description: 'UUID of the profile',
+    example: '0dc806a8-395d-4149-9830-55e869633490',
+  })
+  @ApiResponse({ status: 200, description: 'Gallery images returned', type: GalleryListResponseDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Gallery image not found' })
+  getGalleryViewById(
+    @Param('profileId') profileId: string,
+    //@Param('profileId', ParseUUIDPipe) profileId: string,
+  ): Promise<GalleryListResponseDto> {
+    return this.galleryService.getGalleryViewById(profileId);
   }
 
   // ── DELETE /gallery/:id ───────────────────────────────────────────────────

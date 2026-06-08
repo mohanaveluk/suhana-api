@@ -15,14 +15,14 @@ export class ContactController {
   @ApiResponse({ status: 201, description: 'Contact form submitted successfully' })
   @ApiResponse({ status: 400, description: 'Bad request - validation error' })
   @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing token' })
-  create(@Body() createContactDto: CreateContactDto) {
-    return this.contactService.create(createContactDto);
+  async create(@Body() createContactDto: CreateContactDto) {
+    return await this.contactService.create(createContactDto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Get all contact records' })
   @ApiResponse({ status: 200, description: 'List of all contact records' })
-  findAll() {
+  async findAll() {
     return this.contactService.findAll();
   }
 }

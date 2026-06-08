@@ -17,6 +17,8 @@ export class AdminService {
     const totalMatches = await this.matchRepo.count();
     const successfulConnections = await this.matchRepo.count({ where: { status: 'connected' } });
     const reportedProfiles = await this.profileRepo.count({ where: { status: 'reported' } });
+    const pendingProfiles = await this.profileRepo.count({ where: { status: 'pending' } });
+    const blockedProfiles = await this.profileRepo.count({ where: { status: 'blocked' } });
     const premiumUsers = await this.userRepo
       .createQueryBuilder('u')
       .where('u.membership != :free', { free: 'free' })
@@ -26,7 +28,7 @@ export class AdminService {
     today.setHours(0, 0, 0, 0);
     const newRegistrationsToday = await this.userRepo
       .createQueryBuilder('u')
-      .where('u.createdAt >= :today', { today })
+      .where('u.created_at >= :today', { today })
       .getCount();
 
     return {
@@ -35,6 +37,8 @@ export class AdminService {
       totalMatches,
       successfulConnections,
       reportedProfiles,
+      pendingProfiles,
+      blockedProfiles,
       premiumUsers,
       newRegistrationsToday,
     };
@@ -87,7 +91,8 @@ export class AdminService {
         .where('m.suggestedAt >= :start AND m.suggestedAt <= :end', { start: startDate, end: endDate })
         .getCount();
 
-      analytics.push({ month: months[i], matches: count || Math.floor(Math.random() * 300 + 50) });
+      analytics.push({ month: months[i], matches: count });
+      //analytics.push({ month: months[i], matches: count || Math.floor(Math.random() * 300 + 50) });
     }
     return analytics;
   }
@@ -102,10 +107,11 @@ export class AdminService {
 
       const count = await this.userRepo
         .createQueryBuilder('u')
-        .where('u.createdAt >= :start AND u.createdAt <= :end', { start: startDate, end: endDate })
+        .where('u.created_at >= :start AND u.created_at <= :end', { start: startDate, end: endDate })
         .getCount();
 
-      trends.push({ month: months[i], registrations: count || Math.floor(Math.random() * 200 + 30) });
+      trends.push({ month: months[i], registrations: count });
+      //trends.push({ month: months[i], registrations: count || Math.floor(Math.random() * 200 + 30) });
     }
     return trends;
   }

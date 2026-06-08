@@ -3,7 +3,7 @@ https://docs.nestjs.com/controllers#controllers
 */
 
 import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { ResponseDto } from 'src/common/dto/response.dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
@@ -72,6 +72,7 @@ export class UserController {
 
     @Post('heartbeat')
     @UseGuards(JwtAuthGuard)
+    
     @ApiOperation({ summary: 'Update presence — call every 2 minutes while app is open' })
     @ApiResponse({ status: 201, description: 'Presence updated' })
     heartbeat(@Request() req: any) {
@@ -96,6 +97,7 @@ export class UserController {
 
     @Post(':id/block')
     @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
     @ApiOperation({ summary: 'Block a user' })
     @ApiResponse({ status: 201, description: 'User blocked' })
     blockUser(@Param('id') id: string, @Request() req: any) {
@@ -104,6 +106,7 @@ export class UserController {
 
     @Post(':id/report')
     @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
     @ApiOperation({ summary: 'Report a user' })
     @ApiResponse({ status: 201, description: 'User reported' })
     reportUser(@Param('id') id: string, @Request() req: any, @Body('reason') reason: string) {
