@@ -25,16 +25,17 @@ export class ProfilesService {
     const qb = this.profileRepo.createQueryBuilder('p')
       .leftJoinAndSelect('p.photos', 'photos')
       .leftJoinAndSelect('p.user', 'u')
-      //.where('p.status = :status', { status: 'active' });
-  
-      // Status filter
-      const queryStatus = search.status?.trim() || 'active';
+    //.where('p.status = :status', { status: 'active' });
 
-      if (queryStatus === 'all') {
-        qb.where('1 = 1');
-      } else {
-        qb.where('p.status = :status', { status: queryStatus });
-      }      
+    // Status filter
+    const queryStatus = search.status?.trim() || 'active';
+
+    if (queryStatus === 'all') {
+      qb.where('1 = 1');
+    } else {
+      qb.where('p.status = :status', { status: queryStatus })
+        .andWhere('u.is_active = :isActive', { isActive: 1, });
+    }      
 
     if (search.gender) qb.andWhere('p.gender = :gender', { gender: search.gender });
     if (search.religion) qb.andWhere('p.religion = :religion', { religion: search.religion });
@@ -63,7 +64,7 @@ export class ProfilesService {
 
   async findById(id: string) {
     const profile = await this.profileRepo.findOne({
-      where: { id },
+      where: { id, user: {is_active: 1} },
       relations: ['photos', 'user'],
     });
     if (!profile) throw new NotFoundException('Profile not found');
