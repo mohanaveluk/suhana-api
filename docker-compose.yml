@@ -26,7 +26,7 @@ services:
       MYSQL_ROOT_PASSWORD: 'psql$voice'
       MYSQL_USER: adminvoice
       MYSQL_PASSWORD: 'psql$voice'
-      MYSQL_DATABASE: collegedb
+      MYSQL_DATABASE: suhana
     ports:
       - "3308:3306"
     volumes:
@@ -50,7 +50,7 @@ services:
       - DB_PORT=3306
       - DB_USERNAME=root
       - DB_PASSWORD=Password!given
-      - DB_DATABASE=collegedb
+      - DB_DATABASE=suhana
     ports:
       - "3000:3000"
     volumes:
