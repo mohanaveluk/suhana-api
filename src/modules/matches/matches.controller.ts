@@ -53,7 +53,8 @@ export class MatchesController {
   @Patch(':id/status')
   @ApiOperation({ summary: 'Update match status (shortlist, interested, connected, skip, reconsider)' })
   @ApiResponse({ status: 200, description: 'Status updated' })
-  updateStatus(@Param('id') id: string, @Body() dto: UpdateMatchStatusDto) {
-    return this.matchesService.updateStatus(id, dto.status);
+  updateStatus(@Param('id') id: string, @Body() dto: UpdateMatchStatusDto, @Request() req: any) {
+    const domain = `${req.get('origin')}`; 
+    return this.matchesService.updateStatus(id, dto.status, domain);
   }
 }

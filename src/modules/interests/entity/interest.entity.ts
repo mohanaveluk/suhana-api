@@ -32,6 +32,12 @@ export class Interest {
   })
   status: string;
 
+  @Column({ type: 'datetime', nullable: true })
+  acceptedOn: Date;
+
   @CreateDateColumn()
   createdAt: Date;
+
+  @Column({type: 'uuid', nullable: true})
+  guid: string;
 }

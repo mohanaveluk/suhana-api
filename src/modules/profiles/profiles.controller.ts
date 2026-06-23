@@ -65,7 +65,8 @@ export class ProfilesController {
   @Patch('new')
   @ApiOperation({ summary: 'Update current user profile' })
   updateProfileNew(@Request() req: any, @Body() dto: UpdateProfileDto) {
-    return this.profilesService.update(req.user.id, dto);
+    const domain = `${req.get('origin')}`; 
+    return this.profilesService.update(req.user.id, domain, dto);
   }
 
   @Patch('me')
@@ -73,7 +74,8 @@ export class ProfilesController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update current user profile' })
   updateProfile(@Request() req: any, @Body() dto: UpdateProfileDto) {
-    return this.profilesService.update(req.user.id, dto);
+    const domain = `${req.get('origin')}`; 
+    return this.profilesService.update(req.user.id, domain, dto);
   }
 
   @Patch('admx/:id')
@@ -81,7 +83,8 @@ export class ProfilesController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update current user profile' })
   updateProfileByAdmx(@Request() req: any, @Param('id') id: string, @Body() dto: UpdateProfileDto) {
-    return this.profilesService.update(id, dto);
+    const domain = `${req.get('origin')}`; 
+    return this.profilesService.update(id, domain, dto);
   }
 
   @Post('me/photos')

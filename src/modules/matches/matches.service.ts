@@ -7,6 +7,7 @@ import { Interest } from '../interests/entity/interest.entity';
 import { EDUCATION_TIER } from './matches-lookup';
 import { scoreAgeGap, scoreIncome, scoreMotherTongue, computeCompatibilityRules, generateBadges } from '../../shared/matches/matches.helper';
 import { Badge } from 'src/shared/matches/matches.model';
+import { InterestsService } from '../interests/interests.service';
 
 type TextBlock = Anthropic.Messages.TextBlock;
 
@@ -25,6 +26,7 @@ export class MatchesService {
     @InjectRepository(Interest) private readonly interestRepo: Repository<Interest>,
     @InjectRepository(UserSubscription) private readonly userSubscriptionRepo: Repository<UserSubscription>,
     @InjectRepository(HoroscopeCompatibilityReport) private readonly horoscopeReportRepo: Repository<HoroscopeCompatibilityReport>,
+    private readonly interestService: InterestsService,
     private readonly anthropic: Anthropic,
   ) {}
 
@@ -526,7 +528,7 @@ Return ONLY this JSON structure (fill every field — do not omit any key):
     return this.formatMatch(match);
   }
 
-  async updateStatus(id: string, status: string) {
+  async updateStatus(id: string, status: string, domain: string) {
     const match = await this.matchRepo.findOne({ where: { id } });
     if (!match) throw new NotFoundException('Match not found');
 
@@ -549,7 +551,8 @@ Return ONLY this JSON structure (fill every field — do not omit any key):
         toUserId: response.matchedUserId,
         message: 'I would love to connect and get to know you better. Looking forward to hearing from you!'
       });
-      this.interestRepo.save(newInterest);
+      //this.interestRepo.save(newInterest);
+      await this.interestService.send(response.userId, response.matchedUserId, 'I would love to connect and get to know you better. Looking forward to hearing from you!', domain);
     }
 
     return response;

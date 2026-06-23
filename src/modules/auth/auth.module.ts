@@ -16,7 +16,7 @@ import { JwtStrategy } from 'src/common/middleware/jwt.strategy';
 import { DateService } from 'src/shared/services/date.service';
 import { TokenService } from './token.service';
 import { StorageService } from 'src/shared/services/storage.service';
-import { EmailService } from 'src/shared/email/email.service';
+import { EmailModule } from 'src/shared/email/email.module';
 import { CommonService } from 'src/common/common.service';
 import { UserLoginHistoryService } from './user-login-history.service';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
@@ -44,6 +44,7 @@ dotenv.config();
       },
     }),
       LogModule,
+      EmailModule,
     // JwtModule.registerAsync({
     //   imports: [ConfigModule],
     //   inject: [ConfigService],
@@ -68,7 +69,6 @@ dotenv.config();
     TokenService,
     StorageService,
     CloudStorageService,
-    EmailService,
     CommonService,
     //UsersService,
     UserLoginHistoryService,
