@@ -35,6 +35,7 @@ import { PasswordResetToken } from './entity/password-reset-token.entity';
 import { buildOtpEmailHtml } from 'src/shared/email/templates/otc-email-templates';
 import { Profile } from '../user/entity';
 import { customAlphabet, nanoid } from 'nanoid';
+import { EmailType } from '../email-history/entity/email-history.entity';
 
 
 
@@ -145,8 +146,14 @@ export class AuthService {
       this.logger.debug('Sending email...');
       await this.emailService.sendEmail({
         to: user.email,
-        subject: 'Verify Your Email Address',
-        html: verifyEmailTemplate(verificationCode, user.id, user.first_name, domain),
+        subject: 'Suhana - Verify Your Email Address',
+        html: verifyEmailTemplate(verificationCode, user.id, null, domain),
+        history: {
+          emailType: EmailType.EMAIL_VERIFICATION,
+          fromUserId: user.id,
+          toUserId: user.id,
+          createdBy: user.id          
+        }
       });
       this.logger.debug('Email has been sent');
 
@@ -277,8 +284,14 @@ export class AuthService {
         // Send verification email
         await this.emailService.sendEmail({
           to: user.email,
-          subject: 'Verify Your Email Address',
+          subject: 'Suhana - Verify Your Email Address',
           html: verifyEmailTemplate(verificationCode, user.id, user.first_name, domain),
+          history: {
+            emailType: EmailType.EMAIL_VERIFICATION,
+            fromUserId: user.id,
+            toUserId: user.id,
+            createdBy: user.id          
+          }
         });
       }
 
@@ -522,8 +535,14 @@ export class AuthService {
       this.logger.debug(`Sending email with reset link for user: '${user.email}'`);
       await this.emailService.sendEmail({
         to: user.email,
-        subject: 'Password Reset Request',
+        subject: 'Suhana - Password Reset Request',
         html: passwordResetTemplate(resetLink),
+        history: {
+          emailType: EmailType.PASSWORD_RESET,
+          fromUserId: user.id,
+          toUserId: user.id,
+          createdBy: user.id          
+        }
       });
   
       return { message: 'If your email is registered, you will receive password reset instructions' };
@@ -564,7 +583,8 @@ export class AuthService {
       this.logger.debug(`Password reset successfully for user: '${user.email}'`);
       return { message: 'Password reset successfully' };
     } catch (error) {
-      if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      const errName = (error && typeof (error as any).name === 'string') ? (error as any).name : null;
+      if (errName === 'JsonWebTokenError' || errName === 'TokenExpiredError') {
         throw new BadRequestException('Invalid or expired reset token');
       }
       throw error;
@@ -591,8 +611,14 @@ export class AuthService {
       // Send verification email
       await this.emailService.sendEmail({
         to: user.email,
-        subject: 'Verify Your Email Address',
+        subject: 'Suhana - Verify Your Email Address',
         html: verifyEmailTemplate(verificationCode, user.id, user.first_name, "domain"),
+        history: {
+          emailType: EmailType.EMAIL_VERIFICATION,
+          fromUserId: user.id,
+          toUserId: user.id,
+          createdBy: user.id          
+        }
       });
 
       return { message: 'The verification code has been sent again. Please check your email for verification code' };
@@ -626,8 +652,15 @@ export class AuthService {
       
       await this.emailService.sendEmail({
         to: user.email,
-        subject: 'Verify Your Email Address',
+        subject: 'Suhana - Verify Your Email Address',
         html: verifyEmailTemplate(verificationCode, user.id, user.first_name, domain),
+        history: {
+          emailType: EmailType.EMAIL_VERIFICATION,
+          fromUserId: user.id,
+          toUserId: user.id,
+          createdBy: user.id          
+        }
+        
       });
       
       return { message: 'Verification email sent successfully. Please check your email for verification code' };
@@ -667,8 +700,14 @@ export class AuthService {
     // Send OTP email
     await this.emailService.sendEmail({
       to:      email,
-      subject: 'Your password reset code',
+      subject: 'Suhana - Your password reset code',
       html:    buildOtpEmailHtml(otp, user.first_name ?? 'there'),
+      history: {
+        emailType: EmailType.PASSWORD_RESET,
+        fromUserId: user.id,
+        toUserId: user.id,
+        createdBy: user.id          
+      }
     });
   }
 

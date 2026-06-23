@@ -6,6 +6,10 @@ import { UpdateProfileDto, SearchProfilesDto } from './dto/profile.dto';
 import { Profile, ProfilePhoto, User } from '../user/entity';
 import { CloudStorageService } from 'src/common/services/cloud-storage.service';
 import { url } from 'inspector/promises';
+import { LookupService } from '../lookup/lookup.service';
+import { CustomLoggerService } from '../logger/custom-logger.service';
+import { EmailService } from 'src/shared/email/email.service';
+import { verifyEmailTemplate } from 'src/shared/email/templates/verify-email-template';
 
 
 @Injectable()
@@ -15,6 +19,9 @@ export class ProfilesService {
     @InjectRepository(ProfilePhoto) private readonly photoRepo: Repository<ProfilePhoto>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     private cloudStorageService: CloudStorageService,
+    private lookupService: LookupService,
+    private emailService: EmailService,
+    private logger: CustomLoggerService
   ) {}
 
   async findAll(search: SearchProfilesDto) {
@@ -38,13 +45,26 @@ export class ProfilesService {
     }      
 
     if (search.gender) qb.andWhere('p.gender = :gender', { gender: search.gender });
-    if (search.religion) qb.andWhere('p.religion = :religion', { religion: search.religion });
-    if (search.city) qb.andWhere('p.city LIKE :city', { city: `%${search.city}%` });
-    if (search.educationLevel) qb.andWhere('p.educationLevel = :edu', { edu: search.educationLevel });
+    if (search.religion) {
+      const religions = search.religion.split(',').map((r) => r.trim()).filter(Boolean);
+      qb.andWhere('p.religion IN (:...religions)', { religions });
+    }
+    if (search.city){
+      const locations = search.city.split(',').map((r) => r.trim()).filter(Boolean);
+      qb.andWhere('p.city IN (:...locations)', { locations });
+    }
+    if (search.educationLevel){
+      const educationLevels = search.educationLevel.split(',').map((r) => r.trim()).filter(Boolean);
+      qb.andWhere('p.educationLevel IN (:...educationLevels)', { educationLevels });
+    }
+    if (search.occupation){
+      const occupations = search.occupation.split(',').map((r) => r.trim()).filter(Boolean);
+      qb.andWhere('p.occupationTitle IN (:...occupations)', { occupations });
+    }        
     if (search.ageMin) qb.andWhere('p.age >= :ageMin', { ageMin: search.ageMin });
     if (search.ageMax) qb.andWhere('p.age <= :ageMax', { ageMax: search.ageMax });
     if (search.query) {
-      qb.andWhere('(p.firstName LIKE :q OR p.lastName LIKE :q OR p.city LIKE :q OR p.occupationTitle LIKE :q)', {
+      qb.andWhere('(p.firstName LIKE :q OR p.lastName LIKE :q OR p.city LIKE :q OR p.occupationTitle LIKE :q OR p.educationLevel LIKE :q OR p.religion LIKE :q)', {
         q: `%${search.query}%`,
       });
     }
@@ -89,55 +109,79 @@ export class ProfilesService {
     return this.toUserProfileResponse(user);
   }
 
-  async update(userId: string, dto: UpdateProfileDto) {
-    const user = await this.userRepo.findOne({
-      where: { id: userId },
-      relations: ['profile', 'profile.photos'],
-    });
-    if (!user?.profile) throw new NotFoundException('Profile not found');
+  async update(userId: string, domain: string, dto: UpdateProfileDto) {
+    try {
+      const user = await this.userRepo.findOne({
+        where: { id: userId },
+        relations: ['profile', 'profile.photos'],
+      });
+      if (!user?.profile) throw new NotFoundException('Profile not found');
 
-    Object.assign(user.profile, dto);
-    user.profile.firstName = dto.firstName || user.profile.firstName;
-    user.profile.lastName = dto.lastName || user.profile.lastName;
-    user.profile.age = dto.age || user.profile.age;
-    user.profile.dateOfBirth = dto.dateOfBirth ? new Date(dto.dateOfBirth) : user.profile.dateOfBirth;
-    user.profile.educationField = dto.education?.field || user.profile.educationField;
-    user.profile.educationLevel = dto.education?.level || user.profile.educationLevel;
-    user.profile.institution = dto.education?.institution || user.profile.institution;
-    user.profile.occupationTitle = dto.occupation?.title || user.profile.occupationTitle;
-    user.profile.company = dto.occupation?.company || user.profile.company;
-    user.profile.annualIncome = dto.occupation?.annualIncome || user.profile.annualIncome;
-    user.profile.workingStatus = dto.occupation?.workingStatus || user.profile.workingStatus;
-    user.profile.city = dto.location?.city || user.profile.city;
-    user.profile.state = dto.location?.state || user.profile.state;
-    user.profile.country = dto.location?.country || user.profile.country;
-    user.profile.willingToRelocate = dto.location?.willingToRelocate ?? user.profile.willingToRelocate;
-    user.profile.height = dto.height || user.profile.height;
-    user.profile.weight = dto.weight || user.profile.weight;
-    user.profile.preferences.ageRange.min = dto.preferences?.ageRange?.min || user.profile.preferences.ageRange.min;
-    user.profile.preferences.ageRange.max = dto.preferences?.ageRange?.max || user.profile.preferences.ageRange.max;
-    user.profile.fatherOccupation = dto.familyDetails?.fatherOccupation || user.profile.fatherOccupation;
-    user.profile.motherOccupation = dto.familyDetails?.motherOccupation || user.profile.motherOccupation;
-    user.profile.siblings = dto.familyDetails?.siblings || user.profile.siblings;
-    user.profile.familyValues = dto.familyDetails?.familyValues || user.profile.familyValues;
-    user.profile.familyPreferenceNote = dto.familyDetails?.familyPreferenceNote || user.profile.familyPreferenceNote;
+      Object.assign(user.profile, dto);
+      user.profile.firstName = dto.firstName || user.profile.firstName;
+      user.profile.lastName = dto.lastName || user.profile.lastName;
+      user.profile.age = dto.age || user.profile.age;
+      user.profile.dateOfBirth = dto.dateOfBirth ? new Date(dto.dateOfBirth) : user.profile.dateOfBirth;
+      user.profile.educationField = dto.education?.field || user.profile.educationField;
+      user.profile.educationLevel = dto.education?.level || user.profile.educationLevel;
+      user.profile.institution = dto.education?.institution || user.profile.institution;
+      user.profile.occupationTitle = dto.occupation?.title || user.profile.occupationTitle;
+      user.profile.company = dto.occupation?.company || user.profile.company;
+      user.profile.annualIncome = dto.occupation?.annualIncome || user.profile.annualIncome;
+      user.profile.workingStatus = dto.occupation?.workingStatus || user.profile.workingStatus;
+      user.profile.city = dto.location?.city || user.profile.city;
+      user.profile.state = dto.location?.state || user.profile.state;
+      user.profile.country = dto.location?.country || user.profile.country;
+      user.profile.willingToRelocate = dto.location?.willingToRelocate ?? user.profile.willingToRelocate;
+      user.profile.height = dto.height || user.profile.height;
+      user.profile.weight = dto.weight || user.profile.weight;
+      user.profile.preferences.ageRange.min = dto.preferences?.ageRange?.min || user.profile.preferences.ageRange.min;
+      user.profile.preferences.ageRange.max = dto.preferences?.ageRange?.max || user.profile.preferences.ageRange.max;
+      user.profile.fatherOccupation = dto.familyDetails?.fatherOccupation || user.profile.fatherOccupation;
+      user.profile.motherOccupation = dto.familyDetails?.motherOccupation || user.profile.motherOccupation;
+      user.profile.siblings = dto.familyDetails?.siblings || user.profile.siblings;
+      user.profile.familyValues = dto.familyDetails?.familyValues || user.profile.familyValues;
+      user.profile.familyPreferenceNote = dto.familyDetails?.familyPreferenceNote || user.profile.familyPreferenceNote;
 
-    user.profile.horoscope = {
-      timeOfBirth: dto.horoscope?.timeOfBirth || user.profile.horoscope?.timeOfBirth,
-      placeOfBirth: dto.horoscope?.placeOfBirth || user.profile.horoscope?.placeOfBirth,
-      rashi: dto.horoscope?.rashi || user.profile.horoscope?.rashi,
-      nakshatra: dto.horoscope?.nakshatra || user.profile.horoscope?.nakshatra,
-      manglikStatus: dto.horoscope?.manglikStatus || user.profile.horoscope?.manglikStatus,
-      documentUrl: dto.horoscope?.documentUrl || user.profile.horoscope?.documentUrl,
-    };
-    user.profile.horoscopeDocUrl = dto.horoscope?.documentUrl || user.profile.horoscopeDocUrl;
+      user.profile.horoscope = {
+        timeOfBirth: dto.horoscope?.timeOfBirth || user.profile.horoscope?.timeOfBirth,
+        placeOfBirth: dto.horoscope?.placeOfBirth || user.profile.horoscope?.placeOfBirth,
+        rashi: dto.horoscope?.rashi || user.profile.horoscope?.rashi,
+        nakshatra: dto.horoscope?.nakshatra || user.profile.horoscope?.nakshatra,
+        manglikStatus: dto.horoscope?.manglikStatus || user.profile.horoscope?.manglikStatus,
+        documentUrl: dto.horoscope?.documentUrl || user.profile.horoscope?.documentUrl,
+      };
+      user.profile.horoscopeDocUrl = dto.horoscope?.documentUrl || user.profile.horoscopeDocUrl;
 
-    user.profile.profileCompleteness = this.calculateCompleteness(user.profile);
-    const saved = await this.profileRepo.save(user.profile);
-    if(dto.photos && dto.photos.length > 0){
-      await this.addPhoto(userId, dto.photos?.[0]?.url, dto.photos?.[0]?.isPrimary);
+      user.profile.profileCompleteness = this.calculateCompleteness(user.profile);
+      const saved = await this.profileRepo.save(user.profile);
+
+
+      // Send verification email
+      this.logger.debug('Sending email...');
+      await this.emailService.sendEmail({
+        to: user.email,
+        subject: 'Verify Your Email Address',
+        html: verifyEmailTemplate(user.verification_code, user.id, null, domain),
+      });
+      this.logger.debug('Email has been sent');
+
+      // Auto-capture unique city and occupation values for dropdown lookups
+      await Promise.all([
+        this.lookupService.upsertCity(saved.city),
+        this.lookupService.upsertEducation(saved.educationLevel),
+        this.lookupService.upsertOccupation(saved.occupationTitle),
+      ]);
+
+      if (dto.photos && dto.photos.length > 0) {
+        await this.addPhoto(userId, dto.photos?.[0]?.url, dto.photos?.[0]?.isPrimary);
+      }
+      return this.toProfileResponse(saved);
+      
+    } catch (err) {
+      this.logger.debug(err as string);
+      throw err;
     }
-    return this.toProfileResponse(saved);
   }
 
   async addPhoto(userId: string, url: string, isPrimary = false) {

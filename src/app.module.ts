@@ -23,6 +23,8 @@ import { GalleryModule } from './modules/gallery/gallery.module';
 import { InterestsModule } from './modules/interests/interests.module';
 import { CallsModule } from './modules/calls/calls.module';
 import { HealthModule } from './modules/health/health.module';
+import { LookupModule } from './modules/lookup/lookup.module';
+import { EmailHistoryModule } from './modules/email-history/email-history.module';
 
 
 @Module({
@@ -56,6 +58,8 @@ import { HealthModule } from './modules/health/health.module';
     AdminModule,
     SettingsModule,
     UserModule,
+    LookupModule,
+    EmailHistoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],
