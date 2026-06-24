@@ -1,0 +1,49 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: suhana-api
+  labels:
+    cloud.googleapis.com/location: us-central1
+spec:
+  template:
+    spec:
+      containers:
+        - image: gcr.io/project-109ac2ae-64ba-45e0-9d2/suhana-api:latest # Placeholder for the built image
+          ports:
+            - containerPort: 8080
+          # Define your application environment variables here
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3306"
+            - name: DATABASE_HOST
+              value: "service-db.cee0nr2kznps.us-east-1.rds.amazonaws.com"
+            - name: DB_USERNAME
+              value: adminvoice
+            - name: DB_PASSWORD
+              value: psql$voice
+            - name: DB_DATABASE
+              value: suhana
+            - name: DB_MIGRATIONS_RUN
+              value: "true"          
+            - name: ADMIN_EMAIL
+              value: gcpstudy0@gmail.com
+            - name: SMTP_HOST
+              value: smtp.ionos.com
+            - name: SMTP_PORT
+              value: 587
+            - name: SMTP_SECURE
+              value: "false"
+            - name: SMTP_USER
+              value: info@densty.com
+            - name: SMTP_PASS
+              value: 88?N#!eyayN39nb
+            - name: SMTP_FROM
+              value: info@densty.com              
+            # Example of securely pulling a sensitive variable from Google Secret Manager
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: my-database-password-secret
+                  key: "latest"
