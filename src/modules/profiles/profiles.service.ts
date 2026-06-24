@@ -118,8 +118,8 @@ export class ProfilesService {
       if (!user?.profile) throw new NotFoundException('Profile not found');
 
       Object.assign(user.profile, dto);
-      user.profile.firstName = dto.firstName || user.profile.firstName;
-      user.profile.lastName = dto.lastName || user.profile.lastName;
+      user.profile.firstName = user.first_name = dto.firstName || user.profile.firstName;
+      user.profile.lastName = user.last_name = dto.lastName || user.profile.lastName;
       user.profile.age = dto.age || user.profile.age;
       user.profile.dateOfBirth = dto.dateOfBirth ? new Date(dto.dateOfBirth) : user.profile.dateOfBirth;
       user.profile.educationField = dto.education?.field || user.profile.educationField;
