@@ -48,6 +48,14 @@ export class UserController {
         return this.userService.findById(id);
     }
 
+    @Get('new/:email')
+    @ApiOperation({ summary: 'Get user by email ' })
+    @ApiResponse({ status: 200, description: 'User found' })
+    @ApiResponse({ status: 404, description: 'User not found' })
+    findByEmail(@Param('email') email: string) {
+        return this.userService.findByEmail(email);
+    }
+
     @Patch(':id/membership')
     @UseGuards(JwtAuthGuard)
     @ApiOperation({ summary: 'Update user membership tier' })

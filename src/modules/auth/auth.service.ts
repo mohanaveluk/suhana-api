@@ -158,7 +158,7 @@ export class AuthService {
       this.logger.debug('Email has been sent');
 
       //const detail = {user: savedUser, accessToken: token };
-      return { detail: token, message: 'User registered successfully. Please check your email for verification code.' };
+      return { detail: token, user: savedUser, message: 'User registered successfully. Please check your email for verification code.' };
     } catch (err) {
       throw err;
     }

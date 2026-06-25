@@ -51,6 +51,15 @@ export class UserService {
     return user;
   }
 
+  async findByEmail(email: string) {
+    const user = await this.userRepo.findOne({
+      where: { email },
+      relations: ['profile', 'profile.photos'],
+    });
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
   async updateMembership(id: string, membership: string) {
     const user = await this.findById(id);
     user.membership = membership;
