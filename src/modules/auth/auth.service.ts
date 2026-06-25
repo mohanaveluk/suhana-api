@@ -144,10 +144,11 @@ export class AuthService {
 
       // Send verification email
       this.logger.debug('Sending email...');
+      const userFirstName = savedUser.first_name ? (savedUser.first_name === "" || savedUser.first_name === 'unknown' ? "User": savedUser.first_name) : "User";
       await this.emailService.sendEmail({
         to: user.email,
         subject: 'Suhana - Verify Your Email Address',
-        html: verifyEmailTemplate(verificationCode, user.id, "User", domain),
+        html: verifyEmailTemplate(verificationCode, user.id, userFirstName, domain),
         history: {
           emailType: EmailType.EMAIL_VERIFICATION,
           fromUserId: user.id,
