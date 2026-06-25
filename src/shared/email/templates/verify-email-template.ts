@@ -151,7 +151,7 @@ export const verifyEmailTemplate = (
           <tr>
             <td style="padding:44px 40px 36px;">
               <p style="margin:0 0 24px;font-size:15px;color:${C.textPrimary};line-height:1.7;">
-                Hi ${first_name},<br/><br/>
+                Dear ${first_name},<br/><br/>
                 Thanks for signing up for <strong style="color:${C.maroon};">Suhana Matrimony</strong>.
                 To activate your account, click the button below. This link is valid for
                 <strong>15&nbsp;minutes</strong>.
