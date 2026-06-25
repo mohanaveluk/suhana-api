@@ -147,7 +147,7 @@ export class AuthService {
       await this.emailService.sendEmail({
         to: user.email,
         subject: 'Suhana - Verify Your Email Address',
-        html: verifyEmailTemplate(verificationCode, user.id, null, domain),
+        html: verifyEmailTemplate(verificationCode, user.id, "User", domain),
         history: {
           emailType: EmailType.EMAIL_VERIFICATION,
           fromUserId: user.id,
