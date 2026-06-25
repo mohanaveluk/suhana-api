@@ -154,6 +154,7 @@ export class ProfilesService {
       user.profile.horoscopeDocUrl = dto.horoscope?.documentUrl || user.profile.horoscopeDocUrl;
 
       user.profile.profileCompleteness = this.calculateCompleteness(user.profile);
+      const userSaved = await this.userRepo.save(user);
       const saved = await this.profileRepo.save(user.profile);
 
 
