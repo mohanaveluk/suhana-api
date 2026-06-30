@@ -109,10 +109,29 @@ export class ProfilesService {
     return this.toUserProfileResponse(user);
   }
 
+  async findByEmailId(email: string) {
+    const user = await this.userRepo.findOne({
+      where: { email: email },
+      relations: ['profile', 'profile.photos'],
+    });
+    if (!user?.profile) throw new NotFoundException('Profile not found');
+    return this.toUserProfileResponse(user);
+  }
+
+  async updateNew(domain: string, dto: UpdateProfileDto) {
+    console.log(JSON.stringify(dto));
+    const user = await this.userRepo.findOne({
+      where: {id: dto.userId, is_email_verified: false, temp_guid: dto.tempGuid}
+    });
+    if (!user) throw new NotFoundException('User not found');
+    const response = await this.update(user.id, domain, dto);
+    return response;
+  }
+
   async update(userId: string, domain: string, dto: UpdateProfileDto) {
     try {
       const user = await this.userRepo.findOne({
-        where: { id: userId },
+        where: { id: userId, temp_guid: dto.tempGuid},
         relations: ['profile', 'profile.photos'],
       });
       if (!user?.profile) throw new NotFoundException('Profile not found');
@@ -158,14 +177,19 @@ export class ProfilesService {
       const saved = await this.profileRepo.save(user.profile);
 
 
-      // Send verification email
-      this.logger.debug('Sending email...');
-      await this.emailService.sendEmail({
-        to: user.email,
-        subject: 'Verify Your Email Address',
-        html: verifyEmailTemplate(user.verification_code, user.id, null, domain),
-      });
-      this.logger.debug('Email has been sent');
+      // if (!userSaved.is_email_verified) {
+      //   //Send verification email
+      //   this.logger.debug('Sending email...');
+      //   const userFirstName = userSaved.first_name ? (userSaved.first_name === "" || userSaved.first_name === 'unknown' ? "User": userSaved.first_name) : "User";
+
+      //   await this.emailService.sendEmail({
+      //     to: user.email,
+      //     cc: 'gcpstudy0@gmail.com',
+      //     subject: 'Verify Your Email Address',
+      //     html: verifyEmailTemplate(user.verification_code, user.id, userFirstName, domain),
+      //   });
+      //   this.logger.debug('Email has been sent');
+      // }
 
       // Auto-capture unique city and occupation values for dropdown lookups
       await Promise.all([
@@ -275,6 +299,9 @@ export class ProfilesService {
       profileImage: user.profile_image,
       lastActive: user.last_active,
       createdAt: user.created_at,
+      tempGuid: user.temp_guid,
+      firstName: user.first_name,
+      lastName: user.last_name,
     }
     return {
       ...this.toProfileResponse(user.profile),

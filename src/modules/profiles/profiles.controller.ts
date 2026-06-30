@@ -37,6 +37,12 @@ export class ProfilesController {
     return this.profilesService.findByUserId(req.user.id);
   }
 
+  @Get('email/:id')
+  @ApiOperation({ summary: 'Get current user profile' })
+  getMyProfileByEmail(@Param('id') id: string) {
+    return this.profilesService.findByEmailId(id);
+  }
+
   @Get('admx/:id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
@@ -66,7 +72,7 @@ export class ProfilesController {
   @ApiOperation({ summary: 'Update current user profile' })
   updateProfileNew(@Request() req: any, @Body() dto: UpdateProfileDto) {
     const domain = `${req.get('origin')}`; 
-    return this.profilesService.update(req.user.id, domain, dto);
+    return this.profilesService.updateNew(domain, dto);
   }
 
   @Patch('me')
@@ -77,6 +83,16 @@ export class ProfilesController {
     const domain = `${req.get('origin')}`; 
     return this.profilesService.update(req.user.id, domain, dto);
   }
+
+
+  // @Patch('me')
+  // @UseGuards(JwtAuthGuard)
+  // @ApiBearerAuth('JWT-auth')
+  // @ApiOperation({ summary: 'Update current user profile' })
+  // updateProfile(@Request() req: any, @Body() dto: UpdateProfileDto) {
+  //   const domain = `${req.get('origin')}`; 
+  //   return this.profilesService.update(req.user.id, domain, dto);
+  // }
 
   @Patch('admx/:id')
   @UseGuards(JwtAuthGuard)
