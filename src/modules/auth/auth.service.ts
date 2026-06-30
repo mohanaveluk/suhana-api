@@ -104,6 +104,7 @@ export class AuthService {
         unverifiedUser.verification_code_expiry = verificationCodeExpiry;
         unverifiedUser.is_email_verified = false;
         unverifiedUser.is_active = 0;
+        unverifiedUser.temp_guid = uuidv4();
       }
 
       const profile = this.profileRepo.create({
@@ -136,6 +137,7 @@ export class AuthService {
         verification_code_expiry: verificationCodeExpiry,
         is_email_verified: false,
         is_active: 0,
+        temp_guid: uuidv4(),
         profile
       }));
 

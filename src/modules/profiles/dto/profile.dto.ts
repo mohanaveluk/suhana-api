@@ -236,6 +236,10 @@ export class UpdateProfileDto {
   @Type(() => HoroscopeDto)
   horoscope: HoroscopeDto;
 
+  @ApiPropertyOptional({ example: 'uuid' })
+  @IsOptional()
+  tempGuid?: string;
+
 }
 
 export class SearchProfilesDto {

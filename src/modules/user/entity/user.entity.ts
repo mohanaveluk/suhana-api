@@ -91,6 +91,9 @@ export class User {
   @Column({ length: 100, nullable: true })
   country: string;
 
+  @Column({type: 'uuid', nullable: true, comment: 'to store the temp guid to validate during the registration'})
+  temp_guid?: string
+
   @OneToMany(() => PasswordArchive, passwordArchive => passwordArchive.user)
   password_history: PasswordArchive[];
 
