@@ -25,6 +25,8 @@ import { CallsModule } from './modules/calls/calls.module';
 import { HealthModule } from './modules/health/health.module';
 import { LookupModule } from './modules/lookup/lookup.module';
 import { EmailHistoryModule } from './modules/email-history/email-history.module';
+import { MatchFixedModule } from './modules/match-fixed/match-fixed.module';
+import { ImageModule } from './modules/image/image.module';
 
 
 @Module({
@@ -60,6 +62,8 @@ import { EmailHistoryModule } from './modules/email-history/email-history.module
     UserModule,
     LookupModule,
     EmailHistoryModule,
+    MatchFixedModule,
+    ImageModule,
   ],
   controllers: [AppController],
   providers: [AppService],

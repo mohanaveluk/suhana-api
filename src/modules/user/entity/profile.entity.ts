@@ -4,6 +4,7 @@ import {
 } from 'typeorm';
 import { User } from './user.entity';
 import { ProfilePhoto } from './profile-photo.entity';
+import { ProfileStatus } from '../enums/profile-status.enum';
 
 @Entity('profiles')
 export class Profile {
@@ -161,6 +162,27 @@ export class Profile {
 
   @OneToMany(() => ProfilePhoto, (photo) => photo.profile, { cascade: true, eager: true })
   photos: ProfilePhoto[];
+
+  // Match-fixed visibility controls
+  @Column({
+    type: 'enum',
+    enum: ProfileStatus,
+    default: ProfileStatus.ACTIVE,
+    name: 'profile_status',
+  })
+  profileStatus: ProfileStatus;
+
+  @Column({ default: true, name: 'is_searchable' })
+  isSearchable: boolean;
+
+  @Column({ default: true, name: 'accept_new_interest' })
+  acceptNewInterest: boolean;
+
+  @Column({ default: true, name: 'accept_new_chat' })
+  acceptNewChat: boolean;
+
+  @Column({ default: true, name: 'show_in_featured' })
+  showInFeatured: boolean;
 
   @CreateDateColumn()
   createdAt: Date;
