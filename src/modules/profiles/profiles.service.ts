@@ -329,6 +329,7 @@ export class ProfilesService {
       status: profile.status,
       profileCompleteness: profile.profileCompleteness,
       videoIntroUrl: profile.videoIntroUrl,
+      profileCode: profile.profileCode,
       location: {
         city: profile.city,
         state: profile.state,
