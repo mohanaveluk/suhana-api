@@ -41,7 +41,8 @@ export class ProfilesService {
       qb.where('1 = 1');
     } else {
       qb.where('p.status = :status', { status: queryStatus })
-        .andWhere('u.is_active = :isActive', { isActive: 1, });
+        .andWhere('u.is_active = :isActive', { isActive: 1, })
+        .andWhere('p.is_searchable = :isSearchable', { isSearchable: 1 });
     }      
 
     if (search.gender) qb.andWhere('p.gender = :gender', { gender: search.gender });
