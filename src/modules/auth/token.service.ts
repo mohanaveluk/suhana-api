@@ -54,6 +54,7 @@ export class TokenService {
         created_at: user.created_at,
         updated_at: user.updated_at,
         last_active: user.last_active,
+        temp_guid: user.temp_guid,
       } 
     };
   }
