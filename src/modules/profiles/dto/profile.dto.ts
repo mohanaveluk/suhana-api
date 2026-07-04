@@ -112,6 +112,11 @@ export class PreferencesDto {
 }
 
 export class HoroscopeDto {
+
+  @ApiPropertyOptional({ example: '1990-01-01T05:00:00.000Z' })
+  @IsOptional() @IsString()
+  dateOfBirth?: Date;
+
   @ApiPropertyOptional({ example: '1990-01-01T05:00:00.000Z' })
   @IsOptional() @IsString()
   timeOfBirth?: string;

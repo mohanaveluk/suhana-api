@@ -164,6 +164,7 @@ export class ProfilesService {
       user.profile.familyPreferenceNote = dto.familyDetails?.familyPreferenceNote || user.profile.familyPreferenceNote;
 
       user.profile.horoscope = {
+        dateOfBirth: dto.horoscope?.dateOfBirth ? new Date(dto.horoscope.dateOfBirth) : user.profile.horoscope?.dateOfBirth,
         timeOfBirth: dto.horoscope?.timeOfBirth || user.profile.horoscope?.timeOfBirth,
         placeOfBirth: dto.horoscope?.placeOfBirth || user.profile.horoscope?.placeOfBirth,
         rashi: dto.horoscope?.rashi || user.profile.horoscope?.rashi,

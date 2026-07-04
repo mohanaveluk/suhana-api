@@ -131,6 +131,7 @@ export class Profile {
   // Horoscope (stored as JSON)
   @Column({ type: 'json', nullable: true })
   horoscope: {
+    dateOfBirth?: Date;
     timeOfBirth?: string;
     placeOfBirth?: string;
     rashi?: string;
