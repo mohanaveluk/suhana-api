@@ -129,6 +129,7 @@ export class AuthService {
         email: registerDto.email,
         password: hashedPassword,
         mobile: registerDto.mobile,
+        gender: registerDto.gender,
         id: uuidv4(),
         role: userRole,
         role_id: role.id,
