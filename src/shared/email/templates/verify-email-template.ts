@@ -16,6 +16,8 @@ const C = {
   ivory:           '#fffff0',  // --suhana-ivory
   ivoryWarm:       '#fdf8f4',  // --suhana-ivory-warm
   gold:            '#c9a84c',  // --suhana-gold
+  goldSharp:       '#f0b616',  // --suhana-gold
+  goldBright:      '#ffe664',  // --suhana-gold
   goldLight:       '#e8d5a0',  // --suhana-gold-light
   blush:           '#fde8e8',  // --suhana-blush
   textPrimary:     '#3d2c2e',  // --suhana-text-primary
@@ -24,6 +26,7 @@ const C = {
   gradient:        'linear-gradient(135deg, #b76e79 0%, #a20000 100%)',        // --suhana-gradient
   gradientLight1:  'linear-gradient(135deg, #f0d4d8 0%, #fde8e8 100%)',        // --suhana-gradient-light1
   gradientLight:   'linear-gradient(135deg, #fff0f2 0%, #f2e5e5 100%)',        // --suhana-gradient-light
+  fontname:           "'Segoe UI',Arial,sans-serif",  // --suhana-font
 };
 
 
@@ -94,6 +97,78 @@ function encodeImageUrl(rawUrl: string): string {
     return rawUrl; // fallback if it's not a valid absolute URL
   }
 }
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Shared: star rating renderer (filled + empty stars using HTML entities)
+// ─────────────────────────────────────────────────────────────────────────────
+function renderStars(rating: number, max = 5): string {
+  const clamped = Math.max(0, Math.min(max, Math.round(rating)));
+  const filled  = '&#9733;'.repeat(clamped);          // ★
+  const empty   = '<span style="opacity:0.28;">&#9733;</span>'.repeat(max - clamped);
+  return `<span style="color:${C.goldBright};font-size:20px;letter-spacing:3px;">${filled}${empty}</span>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Shared: star rating renderer (filled + empty stars using HTML entities)
+// ─────────────────────────────────────────────────────────────────────────────
+function renderBodyStars(rating: number, max = 5): string {
+  const clamped = Math.max(0, Math.min(max, Math.round(rating)));
+  const filled  = '&#9733;'.repeat(clamped);          // ★
+  const empty   = '<span style="opacity:0.28;">&#9733;</span>'.repeat(max - clamped);
+  return `<span style="color:${C.gold};font-size:20px;letter-spacing:3px;">${filled}${empty}</span>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Shared: section-label pill above data rows
+// ─────────────────────────────────────────────────────────────────────────────
+function sectionPill(text: string): string {
+  return `
+  <p style="margin:0 0 10px;font-family:Arial,Helvetica,sans-serif;font-size:10px;
+            font-weight:700;text-transform:uppercase;letter-spacing:1.6px;
+            color:${C.roseGold};">${text}</p>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Shared: single data row — label | value
+// ─────────────────────────────────────────────────────────────────────────────
+function dataRow(label: string, value: string, isLast = false): string {
+  const border = isLast ? '' : `border-bottom:1px solid ${C.roseGoldLighter};`;
+  return `
+  <tr>
+    <td style="font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:700;
+               color:${C.textSecondary};padding:10px 0;vertical-align:top;
+               white-space:nowrap;width:130px;${border}">
+      ${label}
+    </td>
+    <td style="font-family:Arial,Helvetica,sans-serif;font-size:13px;
+               color:${C.textPrimary};padding:10px 0 10px 16px;
+               vertical-align:top;${border}">
+      ${value}
+    </td>
+  </tr>`;
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Shared: quoted message block with left accent bar
+// ─────────────────────────────────────────────────────────────────────────────
+function quotedBlock(text: string, label = 'Message'): string {
+  return `
+  <p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:10px;
+            font-weight:700;text-transform:uppercase;letter-spacing:1.4px;
+            color:${C.roseGold};">${label}</p>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td width="4" style="background:${C.maroon};border-radius:2px;"></td>
+      <td style="padding:12px 16px;background:${C.ivoryWarm};border-radius:0 8px 8px 0;">
+        <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:14px;
+                  color:${C.textPrimary};line-height:1.75;font-style:italic;">${text}</p>
+      </td>
+    </tr>
+  </table>`;
+}
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Template 1 — Account email verification
@@ -956,6 +1031,730 @@ export const interestRequestEmailTemplate = (params: {
     </tr>
   </table>
  
+</body>
+</html>`.trim();
+};
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Template 4 — feedbackAdminNotificationTemplate
+//  Sent to the admin inbox whenever a member submits feedback.
+// ─────────────────────────────────────────────────────────────────────────────
+export const feedbackAdminNotificationTemplate = (params: {
+  submitterName:  string;   // e.g. "Arjun Sharma"
+  submitterEmail: string;
+  category:       string;   // e.g. "PREMIUM BILLING"
+  rating?:        number;   // 1-5
+  subject:        string;
+  message:        string;
+  feedbackId:     string;
+  adminPanelUrl:  string;
+  domain:         string;
+  submittedAt?:   Date;
+  isAnonymous: boolean;
+}): string => {
+
+  const {
+    submitterName, submitterEmail, category,
+    rating, subject, message,
+    feedbackId, adminPanelUrl, domain,
+  } = params;
+
+  const displayName = params.isAnonymous ? 'Anonymous User' : params.submitterName;
+  const year      = new Date().getFullYear();
+  const timestamp = (params.submittedAt ?? new Date()).toLocaleString('en-IN', {
+    dateStyle: 'full', timeStyle: 'short', timeZone: 'Asia/Kolkata',
+  });
+
+  // Truncate long messages for the admin preview
+  const preview = message.length > 220 ? message.slice(0, 220) + '…' : message;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>New Feedback – Suhana Matrimony Admin</title>
+</head>
+<body style="margin:0;padding:0;background-color:${C.blush};font-family:${C.fontname};">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background-color:${C.blush};padding:36px 16px;">
+    <tr><td align="center">
+
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="max-width:600px;background:#ffffff;border-radius:20px;
+                    box-shadow:0 8px 32px ${C.shadow};overflow:hidden;">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:${C.maroon};background:${C.gradient};
+                     padding:36px 40px 28px;text-align:center;">
+            <div style="font-size:32px;margin-bottom:12px;">&#128203;</div>
+            <h1 style="margin:0 0 6px;font-family:${C.fontname};
+                       font-size:22px;font-weight:700;color:#ffffff;">
+              New Feedback Received
+            </h1>
+            <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.8);line-height:1.5;">
+              A member has submitted feedback on Suhana Matrimony
+            </p>
+            <!-- Alert strip -->
+            <div style="display:inline-block;margin-top:14px;background:rgba(201,168,76,0.22);
+                        border:1px solid rgba(201,168,76,0.45);border-radius:50px;
+                        padding:5px 16px;">
+              <span style="font-size:12px;font-weight:600;
+                           color:${C.goldLight};letter-spacing:0.3px;
+                           font-family:Arial,Helvetica,sans-serif;">
+                &#128276;&nbsp; Action Required
+              </span>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Submission timestamp pill -->
+        <tr>
+          <td style="background:${C.roseGoldLighter};padding:10px 40px;
+                     border-bottom:1px solid ${C.roseGoldLight};">
+            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;
+                      color:${C.maroonDark};font-weight:600;text-align:center;">
+              &#128337;&nbsp; Submitted: ${timestamp} IST
+            </p>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:36px 40px 28px;">
+
+            <p style="margin:0 0 22px;font-family:Arial,Helvetica,sans-serif;
+                      font-size:15px;color:${C.textPrimary};line-height:1.7;">
+              Hello <strong>Admin</strong>,<br/>
+              A new feedback has been submitted on <strong style="color:${C.maroon};">Suhana Matrimony</strong>.
+              Please review the details below and take appropriate action.
+            </p>
+
+            <!-- Feedback data table -->
+            <div style="background:${C.ivoryWarm};border-radius:12px;
+                        border:1px solid ${C.roseGoldLighter};padding:20px 22px;
+                        margin-bottom:24px;">
+              ${sectionPill('Submission Details')}
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${dataRow('Submitted By',
+                  `${displayName}
+                   <br/><span style="font-size:12px;color:${C.textSecondary};">
+                     <a href="mailto:${submitterEmail}"
+                        style="color:${C.maroon};text-decoration:none;">${submitterEmail}</a>
+                   </span>`)}
+                ${dataRow('Category',
+                  `<span style="background:${C.roseGoldLighter};color:${C.maroonDark};
+                               border-radius:50px;padding:2px 10px;font-size:12px;
+                               font-weight:700;">${category}</span>`)}
+                ${dataRow('Rating',
+                  rating !== undefined ? renderBodyStars(rating) : '—')}
+                ${dataRow('Subject', `<strong>${subject}</strong>`)}
+                ${dataRow('Feedback ID',
+                  `<code style="font-size:11px;color:${C.textSecondary};
+                                background:${C.roseGoldLighter};padding:2px 8px;
+                                border-radius:4px;">${feedbackId}</code>`, true)}
+              </table>
+            </div>
+
+            <!-- Message preview -->
+            <div style="margin-bottom:28px;">
+              ${quotedBlock(preview, 'Message Preview')}
+            </div>
+
+            <!-- CTA -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center">
+                  <a href="${adminPanelUrl}"
+                     style="display:inline-block;
+                            background:${C.maroon};background:${C.gradient};
+                            color:#ffffff;text-decoration:none;
+                            font-family:Arial,Helvetica,sans-serif;
+                            font-size:14px;font-weight:700;
+                            padding:14px 36px;border-radius:50px;
+                            box-shadow:0 6px 20px rgba(162,0,0,0.32);
+                            letter-spacing:0.3px;">
+                    &#128274;&nbsp; Open Admin Panel
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Reminder strip -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;">
+              <tr>
+                <td style="background:${C.goldLight};border-left:4px solid ${C.gold};
+                           border-radius:6px;padding:13px 18px;">
+                  <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
+                            font-size:13px;color:${C.maroonDark};line-height:1.6;">
+                    <strong>Reminder:</strong> Please log in to the admin panel to review
+                    and take action on this feedback.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:${C.blush};border-top:1px solid ${C.roseGoldLighter};
+                     padding:20px 40px;text-align:center;">
+            <p style="margin:0 0 4px;font-size:13px;color:${C.textSecondary};
+                      font-family:Arial,Helvetica,sans-serif;line-height:1.6;">
+              Internal notification — <strong style="color:${C.maroon};">Suhana Matrimony</strong>
+              Admin System &nbsp;&bull;&nbsp;
+              <a href="mailto:support@${domain}"
+                 style="color:${C.maroon};text-decoration:none;font-weight:600;">support@${domain}</a>
+            </p>
+            <p style="margin:0;font-size:11px;color:${C.roseGoldLight};
+                      font-family:Arial,Helvetica,sans-serif;">
+              © ${year} Suhana Matrimony. All rights reserved.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`.trim();
+};
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Template 5 — feedbackThankYouTemplate
+//  Sent to the member who submitted feedback, confirming receipt.
+// ─────────────────────────────────────────────────────────────────────────────
+export const feedbackThankYouTemplate = (params: {
+  userName:   string;
+  category:    string;
+  subject:     string;
+  rating?:     number;
+  feedbackId?: string;
+  domain:      string;
+}): string => {
+
+  const { userName, category, subject, rating, feedbackId, domain } = params;
+  const year = new Date().getFullYear();
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>Thank You for Your Feedback – Suhana Matrimony</title>
+</head>
+<body style="margin:0;padding:0;background-color:${C.ivoryWarm};font-family:${C.fontname};">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background-color:${C.ivoryWarm};padding:40px 16px;">
+    <tr><td align="center">
+
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="max-width:600px;background:#ffffff;border-radius:20px;
+                    box-shadow:0 8px 32px ${C.shadow};overflow:hidden;">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:${C.maroon};background:${C.gradient};
+                     padding:40px 40px 32px;text-align:center;">
+            <div style="font-size:36px;margin-bottom:12px;">&#128149;</div>
+            <h1 style="margin:0 0 8px;font-family:${C.fontname};
+                       font-size:23px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">
+              Thank You for Your Feedback
+            </h1>
+            <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.82);line-height:1.5;">
+              Your voice helps us build a better experience for everyone
+            </p>
+            ${rating !== undefined ? `
+            <div style="margin-top:16px;">${renderStars(rating)}</div>` : ''}
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:40px 40px 28px;">
+
+            <p style="margin:0 0 8px;font-size:16px;color:${C.textPrimary};line-height:1.7;">
+              Dear <strong>${userName}</strong>,
+            </p>
+            <div style="width:40px;height:3px;background:${C.gradient};
+                        border-radius:2px;margin:0 0 20px;"></div>
+
+            <p style="margin:0 0 20px;font-family:Arial,Helvetica,sans-serif;
+                      font-size:15px;color:${C.textPrimary};line-height:1.8;">
+              Thank you for taking the time to share your feedback with us. Your
+              opinion matters greatly and helps us improve the
+              <strong style="color:${C.maroon};">Suhana Matrimony</strong> experience
+              for every member of our community.
+            </p>
+
+            <!-- Submission summary box -->
+            <div style="background:${C.roseGoldLighter};border-radius:12px;
+                        border:1px solid ${C.roseGoldLight};padding:20px 22px;
+                        margin-bottom:24px;">
+              ${sectionPill('Your Submission')}
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${dataRow('Subject',  `<strong>${subject}</strong>`)}
+                ${dataRow('Category',
+                  `<span style="background:#ffffff;color:${C.maroonDark};
+                               border-radius:50px;padding:2px 10px;font-size:12px;
+                               font-weight:700;">${category}</span>`)}
+                ${feedbackId ? dataRow('Reference ID',
+                  `<code style="font-size:11px;color:${C.textSecondary};
+                                background:#ffffff;padding:2px 8px;
+                                border-radius:4px;">${feedbackId}</code>`, true)
+                  : ''}
+              </table>
+            </div>
+
+            <!-- What happens next checklist -->
+            <div style="background:${C.ivoryWarm};border-radius:12px;
+                        border:1px solid ${C.roseGoldLighter};padding:20px 22px;
+                        margin-bottom:28px;">
+              ${sectionPill('What Happens Next')}
+              ${[
+                ['Our team reviews', `your feedback and categorises it for the right team.`],
+                ['We take action',   `where possible we update our processes based on your input.`],
+                ['We reply',        `if your feedback requires a personal response, we will email you.`],
+              ].map(([title, desc], i) => `
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="margin-bottom:${i < 2 ? '10px' : '0'};">
+                <tr>
+                  <td width="28" valign="top">
+                    <div style="width:24px;height:24px;border-radius:50%;
+                                background:${C.gradient};text-align:center;line-height:24px;
+                                font-family:Arial,Helvetica,sans-serif;font-size:11px;
+                                font-weight:700;color:#ffffff;">${i + 1}</div>
+                  </td>
+                  <td style="padding-left:10px;vertical-align:middle;">
+                    <span style="font-family:Arial,Helvetica,sans-serif;font-size:13px;
+                                 color:${C.textPrimary};line-height:1.5;">
+                      <strong style="color:${C.maroonDark};">${title}</strong> — ${desc}
+                    </span>
+                  </td>
+                </tr>
+              </table>`).join('')}
+            </div>
+
+            <!-- Gold reassurance bar -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="background:${C.goldLight};border-left:4px solid ${C.gold};
+                           border-radius:6px;padding:13px 18px;">
+                  <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
+                            font-size:13px;color:${C.maroonDark};line-height:1.6;">
+                    We have received your feedback and our team will review it shortly.
+                    If your feedback requires a response, we will get back to you as soon as possible.
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+
+        <!-- Sign-off -->
+        <tr>
+          <td style="background:${C.blush};border-top:1px solid ${C.roseGoldLighter};
+                     padding:22px 40px;">
+            <p style="margin:0 0 3px;font-family:${C.fontname};
+                      font-size:15px;color:${C.textPrimary};">Warm regards,</p>
+            <p style="margin:0 0 2px;font-family:${C.fontname};
+                      font-size:16px;font-weight:700;color:${C.maroon};">
+              The Suhana Matrimony Team
+            </p>
+            <p style="margin:0;font-family:${C.fontname};
+                      font-size:12px;color:${C.roseGold};">
+              Connecting hearts, building futures.
+            </p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:${C.roseGoldLighter};border-top:1px solid ${C.roseGoldLight};
+                     padding:16px 40px;text-align:center;">
+            <p style="margin:0 0 4px;font-size:12px;color:${C.textSecondary};
+                      font-family:Arial,Helvetica,sans-serif;">
+              Questions? &nbsp;
+              <a href="mailto:support@${domain}"
+                 style="color:${C.maroon};text-decoration:none;font-weight:600;">support@${domain}</a>
+            </p>
+            <p style="margin:0;font-size:11px;color:${C.roseGoldLight};
+                      font-family:Arial,Helvetica,sans-serif;">
+              © ${year} Suhana Matrimony. All rights reserved.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`.trim();
+};
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Template 6 — profileFeedbackNotificationTemplate
+//  Sent to a member when another member (or anonymous) leaves feedback
+//  specifically on their profile.
+// ─────────────────────────────────────────────────────────────────────────────
+export const profileFeedbackNotificationTemplate = (params: {
+  targetName:   string;    // profile owner who receives this email
+  reviewerName: string;    // person who left the feedback
+  isAnonymous:  boolean;   // if true, reviewer name is hidden
+  category:     string;    // feedback type e.g. "PROFILE_QUALITY"
+  subject:      string;
+  rating?:      number;
+  loginUrl:     string;    // deep link to the member's profile page
+  domain:       string;
+}): string => {
+
+  const { targetName, reviewerName, isAnonymous,
+          category, subject, rating, loginUrl, domain } = params;
+
+  const year = new Date().getFullYear();
+
+  // This mirrors the reviewerDisplay logic from the caller's snippet
+  const reviewerDisplay = isAnonymous ? 'a Suhana member' : reviewerName;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>New Feedback on Your Profile – Suhana Matrimony</title>
+</head>
+<body style="margin:0;padding:0;background-color:${C.blush};font-family:${C.fontname};">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background-color:${C.blush};padding:40px 16px;">
+    <tr><td align="center">
+
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="max-width:600px;background:#ffffff;border-radius:20px;
+                    box-shadow:0 8px 32px ${C.shadow};overflow:hidden;">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:${C.maroon};background:${C.gradient};
+                     padding:40px 40px 32px;text-align:center;">
+            <div style="font-size:36px;margin-bottom:12px;">&#11088;</div>
+            <h1 style="margin:0 0 8px;font-family:${C.fontname};
+                       font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">
+              New Feedback On Your Profile
+            </h1>
+            <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.82);line-height:1.5;">
+              A member shared their thoughts about your profile
+            </p>
+            ${rating !== undefined ? `
+            <div style="margin-top:14px;">${renderStars(rating)}</div>` : ''}
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:40px 40px 28px;">
+
+            <p style="margin:0 0 6px;font-size:16px;color:${C.textPrimary};line-height:1.7;">
+              Dear <strong>${targetName}</strong>,
+            </p>
+            <div style="width:40px;height:3px;background:${C.gradient};
+                        border-radius:2px;margin:0 0 20px;"></div>
+
+            <p style="margin:0 0 24px;font-family:Arial,Helvetica,sans-serif;
+                      font-size:15px;color:${C.textPrimary};line-height:1.8;">
+              You have received new feedback from
+              <strong style="color:${C.maroon};">${reviewerDisplay}</strong>
+              on your <strong>Suhana Matrimony</strong> profile.
+            </p>
+
+            <!-- Feedback summary card -->
+            <div style="background:${C.roseGoldLighter};border-radius:12px;
+                        border:1px solid ${C.roseGoldLight};padding:20px 22px;
+                        margin-bottom:24px;">
+              ${sectionPill('Feedback Details')}
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${dataRow('Type',
+                  `<span style="background:#ffffff;color:${C.maroonDark};
+                               border-radius:50px;padding:2px 10px;font-size:12px;
+                               font-weight:700;">${category.replace(/_/g, ' ')}</span>`)}
+                ${dataRow('Subject', `<strong>${subject}</strong>`)}
+                ${rating !== undefined
+                  ? dataRow('Rating', renderBodyStars(rating), true)
+                  : ''}
+              </table>
+            </div>
+
+            <!-- Moderation note -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="margin-bottom:28px;">
+              <tr>
+                <td style="background:${C.goldLight};border-left:4px solid ${C.gold};
+                           border-radius:6px;padding:14px 18px;">
+                  <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
+                            font-size:13px;color:${C.maroonDark};line-height:1.65;">
+                    <strong>&#128274;&nbsp; Under review.</strong>
+                    Feedback is reviewed by our moderation team before it appears on your profile.
+                    Once approved, it will be visible to other members if marked as public.
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+            <!-- CTA -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
+              <tr>
+                <td align="center">
+                  <a href="${loginUrl}"
+                     style="display:inline-block;
+                            background:${C.maroon};background:${C.gradient};
+                            color:#ffffff;text-decoration:none;
+                            font-family:Arial,Helvetica,sans-serif;
+                            font-size:14px;font-weight:700;
+                            padding:14px 36px;border-radius:50px;
+                            box-shadow:0 6px 20px rgba(162,0,0,0.32);
+                            letter-spacing:0.3px;">
+                    &#128100;&nbsp; View My Profile
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+
+        <!-- Sign-off -->
+        <tr>
+          <td style="background:${C.ivoryWarm};border-top:1px solid ${C.roseGoldLighter};
+                     padding:22px 40px;">
+            <p style="margin:0 0 3px;font-family:${C.fontname};
+                      font-size:15px;color:${C.textPrimary};">Warm regards,</p>
+            <p style="margin:0 0 2px;font-family:${C.fontname};
+                      font-size:16px;font-weight:700;color:${C.maroon};">
+              The Suhana Matrimony Team
+            </p>
+            <p style="margin:0;font-family:${C.fontname};
+                      font-size:12px;color:${C.roseGold};">
+              Connecting hearts, building futures.
+            </p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:${C.blush};border-top:1px solid ${C.roseGoldLight};
+                     padding:16px 40px;text-align:center;">
+            <p style="margin:0 0 4px;font-size:12px;color:${C.textSecondary};
+                      font-family:Arial,Helvetica,sans-serif;">
+              You received this because feedback was left on your Suhana Matrimony profile. &nbsp;
+              <a href="mailto:support@${domain}"
+                 style="color:${C.maroon};text-decoration:none;font-weight:600;">
+                Contact support</a>
+            </p>
+            <p style="margin:0;font-size:11px;color:${C.roseGoldLight};
+                      font-family:Arial,Helvetica,sans-serif;">
+              © ${year} Suhana Matrimony. All rights reserved.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`.trim();
+};
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Template 7 — feedbackReplyTemplate
+//  Sent to the original feedback submitter when the admin (or team) replies.
+// ─────────────────────────────────────────────────────────────────────────────
+export const feedbackReplyTemplate = (params: {
+  userName:        string;   // original feedback submitter
+  repliedBy:       string;   // admin/team member who replied, e.g. "Priya from Suhana Team"
+  originalSubject: string;
+  originalMessage?: string;  // optional — truncated preview of their original feedback
+  replyMessage:    string;
+  feedbackId?:     string;
+  loginUrl?:       string;   // optional CTA to continue the conversation
+  domain:          string;
+}): string => {
+
+  const {
+    userName, repliedBy, originalSubject,
+    originalMessage, replyMessage,
+    feedbackId, loginUrl, domain,
+  } = params;
+
+  const year = new Date().getFullYear();
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>We Replied to Your Feedback – Suhana Matrimony</title>
+</head>
+<body style="margin:0;padding:0;background-color:${C.ivoryWarm};font-family:${C.fontname};">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background-color:${C.ivoryWarm};padding:40px 16px;">
+    <tr><td align="center">
+
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="max-width:600px;background:#ffffff;border-radius:20px;
+                    box-shadow:0 8px 32px ${C.shadow};overflow:hidden;">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:${C.maroon};background:${C.gradient};
+                     padding:40px 40px 32px;text-align:center;">
+            <div style="font-size:36px;margin-bottom:12px;">&#128172;</div>
+            <h1 style="margin:0 0 8px;font-family:${C.fontname};
+                       font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">
+              We Replied to Your Feedback
+            </h1>
+            <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.82);line-height:1.5;">
+              A response from the Suhana Matrimony team
+            </p>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:40px 40px 28px;">
+
+            <p style="margin:0 0 6px;font-size:16px;color:${C.textPrimary};line-height:1.7;">
+              Dear <strong>${userName}</strong>,
+            </p>
+            <div style="width:40px;height:3px;background:${C.gradient};
+                        border-radius:2px;margin:0 0 20px;"></div>
+
+            <p style="margin:0 0 24px;font-family:Arial,Helvetica,sans-serif;
+                      font-size:15px;color:${C.textPrimary};line-height:1.8;">
+              We have reviewed your feedback and
+              <strong style="color:${C.maroon};">${repliedBy}</strong>
+              has sent you a response. Thank you for your patience.
+            </p>
+
+            <!-- Your original feedback -->
+            <div style="margin-bottom:20px;">
+              ${sectionPill('Your Feedback')}
+              <div style="background:${C.roseGoldLighter};border-radius:10px;
+                          border:1px solid ${C.roseGoldLight};padding:14px 18px;">
+                <p style="margin:0 0 4px;font-family:Arial,Helvetica,sans-serif;
+                          font-size:13px;font-weight:700;color:${C.textPrimary};">
+                  ${originalSubject}
+                </p>
+                ${originalMessage ? `
+                <p style="margin:0;font-family:${C.fontname};
+                          font-size:13px;color:${C.textSecondary};
+                          font-style:italic;line-height:1.65;">
+                  ${originalMessage.length > 160 ? originalMessage.slice(0, 160) + '…' : originalMessage}
+                </p>` : ''}
+                ${feedbackId ? `
+                <p style="margin:6px 0 0;font-family:${C.fontname};font-size:11px;
+                          color:${C.roseGoldLight};">
+                  Ref: <code style="background:#ffffff;padding:1px 6px;border-radius:4px;">${feedbackId}</code>
+                </p>` : ''}
+              </div>
+            </div>
+
+            <!-- Our Response (hero block) -->
+            <div style="margin-bottom:28px;">
+              ${quotedBlock(replyMessage, 'Our Response')}
+            </div>
+
+            <!-- Thank you strip -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="margin-bottom:${loginUrl ? '24px' : '0'};">
+              <tr>
+                <td style="background:${C.goldLight};border-left:4px solid ${C.gold};
+                           border-radius:6px;padding:14px 18px;">
+                  <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
+                            font-size:13px;color:${C.maroonDark};line-height:1.6;">
+                    <strong>Thank you for helping us improve Suhana Matrimony.</strong>
+                    Your feedback is invaluable to us and every suggestion helps shape
+                    a better experience for all our members.
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Optional CTA -->
+            ${loginUrl ? `
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center">
+                  <a href="${loginUrl}"
+                     style="display:inline-block;
+                            background:${C.maroon};background:${C.gradient};
+                            color:#ffffff;text-decoration:none;
+                            font-family:Arial,Helvetica,sans-serif;
+                            font-size:14px;font-weight:700;
+                            padding:14px 36px;border-radius:50px;
+                            box-shadow:0 6px 20px rgba(162,0,0,0.3);
+                            letter-spacing:0.3px;">
+                    Continue on Suhana Matrimony
+                  </a>
+                </td>
+              </tr>
+            </table>` : ''}
+
+          </td>
+        </tr>
+
+        <!-- Sign-off -->
+        <tr>
+          <td style="background:${C.blush};border-top:1px solid ${C.roseGoldLighter};
+                     padding:22px 40px;">
+            <p style="margin:0 0 3px;font-family:Georgia,'Times New Roman',serif;
+                      font-size:15px;color:${C.textPrimary};">Warm regards,</p>
+            <p style="margin:0 0 2px;font-family:Georgia,'Times New Roman',serif;
+                      font-size:16px;font-weight:700;color:${C.maroon};">
+              The Suhana Matrimony Team
+            </p>
+            <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
+                      font-size:12px;color:${C.roseGold};">
+              Connecting hearts, building futures.
+            </p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:${C.roseGoldLighter};border-top:1px solid ${C.roseGoldLight};
+                     padding:16px 40px;text-align:center;">
+            <p style="margin:0 0 4px;font-size:12px;color:${C.textSecondary};
+                      font-family:Arial,Helvetica,sans-serif;">
+              © ${year} Suhana Matrimony &nbsp;&bull;&nbsp;
+              Response to your submitted feedback &nbsp;&bull;&nbsp;
+              <a href="mailto:support@${domain}"
+                 style="color:${C.maroon};text-decoration:none;font-weight:600;">
+                support@${domain}</a>
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
 </body>
 </html>`.trim();
 };
