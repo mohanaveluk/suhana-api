@@ -27,6 +27,7 @@ import { LookupModule } from './modules/lookup/lookup.module';
 import { EmailHistoryModule } from './modules/email-history/email-history.module';
 import { MatchFixedModule } from './modules/match-fixed/match-fixed.module';
 import { ImageModule } from './modules/image/image.module';
+import { FeedbackModule } from './modules/feedback/feedback.module';
 
 
 @Module({
@@ -64,6 +65,7 @@ import { ImageModule } from './modules/image/image.module';
     EmailHistoryModule,
     MatchFixedModule,
     ImageModule,
+    FeedbackModule,
   ],
   controllers: [AppController],
   providers: [AppService],
