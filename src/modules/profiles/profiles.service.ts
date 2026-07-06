@@ -69,6 +69,7 @@ export class ProfilesService {
         q: `%${search.query}%`,
       });
     }
+    qb.addOrderBy('photos.isPrimary', 'DESC')
 
     const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
 
@@ -89,6 +90,12 @@ export class ProfilesService {
       relations: ['photos', 'user'],
     });
     if (!profile) throw new NotFoundException('Profile not found');
+
+    if (profile?.photos?.length) {
+      profile.photos.sort(
+        (a, b) => Number(b.isPrimary) - Number(a.isPrimary)
+      );
+    }
     return this.toProfileResponse(profile);
   }
 
@@ -98,6 +105,11 @@ export class ProfilesService {
       relations: ['photos', 'user'],
     });
     if (!profile) throw new NotFoundException('Profile not found');
+    if (profile?.photos?.length) {
+      profile.photos.sort(
+        (a, b) => Number(b.isPrimary) - Number(a.isPrimary)
+      );
+    }
     return this.toProfileResponse(profile);
   }
 
@@ -106,7 +118,13 @@ export class ProfilesService {
       where: { id: userId },
       relations: ['profile', 'profile.photos'],
     });
+
     if (!user?.profile) throw new NotFoundException('Profile not found');
+    if (user?.profile?.photos?.length) {
+      user.profile.photos.sort(
+        (a, b) => Number(b.isPrimary) - Number(a.isPrimary)
+      );
+    }
     return this.toUserProfileResponse(user);
   }
 
@@ -116,6 +134,12 @@ export class ProfilesService {
       relations: ['profile', 'profile.photos'],
     });
     if (!user?.profile) throw new NotFoundException('Profile not found');
+    
+    if (user?.profile?.photos?.length) {
+      user.profile.photos.sort(
+        (a, b) => Number(b.isPrimary) - Number(a.isPrimary)
+      );
+    }
     return this.toUserProfileResponse(user);
   }
 
