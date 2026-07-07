@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, UseGuards, Request, Post } from '@nestjs/common';
+import { Controller, Get, Patch, Param, UseGuards, Request, Post, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { ShortlistService } from './shortlist.service';
@@ -66,4 +66,18 @@ export class ShortlistController {
   reconsider(@Param('id') id: string) {
     return this.shortlistService.reconsider(id);
   }
+
+  @Patch(':id/reset')
+  @ApiOperation({ summary: 'Reset a match to suggested' })
+  resetToSuggested(@Param('id') id: string) {
+    return this.shortlistService.resetToSuggested(id);
+  }
+
+  @Delete('user/:matchedUserId')
+  @ApiOperation({ summary: 'Remove a profile from shortlist' })
+  @ApiResponse({ status: 200, description: 'Profile removed from shortlist' })
+  removeShortlist(@Request() req: any,@Param('matchedUserId') matchedUserId: string) {
+    return this.shortlistService.deShortlistUser(req.user.id, matchedUserId);
+  }
+
 }

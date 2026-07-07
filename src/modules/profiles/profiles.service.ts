@@ -9,7 +9,8 @@ import { url } from 'inspector/promises';
 import { LookupService } from '../lookup/lookup.service';
 import { CustomLoggerService } from '../logger/custom-logger.service';
 import { EmailService } from 'src/shared/email/email.service';
-import { verifyEmailTemplate } from 'src/shared/email/templates/verify-email-template';
+import { shareProfileEmailTemplate, verifyEmailTemplate } from 'src/shared/email/templates/verify-email-template';
+import { ShareProfileDto } from './dto/share-profile.dto';
 
 
 @Injectable()
@@ -294,6 +295,25 @@ export class ProfilesService {
     const url = await this.cloudStorageService.uploadFile(file, folder);
 
     return { message: 'Horoscope document uploaded successfully', url };
+  }
+
+  async shareProfile(userId: string, dto: ShareProfileDto, domain: string): Promise<{ message: string }> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const senderName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'A Suhana member';
+    const subject = dto.subject ?? `${senderName} wants to share a profile with you on Suhana Matrimony`;
+    const html = shareProfileEmailTemplate({
+      senderName,
+      receiverName: dto.receiverName,
+      profileUrl: dto.shareUrl,
+      subject: dto.subject,
+      body: dto.body,
+      domain,
+    });
+
+    await this.emailService.sendEmail({ to: dto.toEmail, subject, html });
+    return { message: 'Profile shared successfully' };
   }
 
   async deletePhoto(userId: string, photoId: string) {
