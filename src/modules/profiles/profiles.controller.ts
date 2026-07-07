@@ -12,6 +12,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody
 import { AuthGuard } from '@nestjs/passport';
 import { ProfilesService } from './profiles.service';
 import { UpdateProfileDto, SearchProfilesDto } from './dto/profile.dto';
+import { ShareProfileDto } from './dto/share-profile.dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -101,6 +102,18 @@ export class ProfilesController {
   updateProfileByAdmx(@Request() req: any, @Param('id') id: string, @Body() dto: UpdateProfileDto) {
     const domain = `${req.get('origin')}`; 
     return this.profilesService.update(id, domain, dto);
+  }
+
+  @Post('share')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Share a profile link via email' })
+  @ApiResponse({ status: 201, description: 'Profile shared successfully', schema: { example: { message: 'Profile shared successfully' } } })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Logged-in user not found' })
+  shareProfile(@Request() req: any, @Body() dto: ShareProfileDto) {
+    const domain = req.get('origin') ?? req.get('host') ?? '';
+    return this.profilesService.shareProfile(req.user.id, dto, domain);
   }
 
   @Post('me/photos')

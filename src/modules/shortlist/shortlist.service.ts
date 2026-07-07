@@ -54,6 +54,17 @@ export class ShortlistService {
     return this.matchRepo.save(match);
   }
 
+  async deShortlistUser(userId: string, matchedUserId: string) {
+    const match = await this.matchRepo.findOne({
+      where: { userId, matchedUserId },
+      relations: ['matchedUser', 'matchedUser.profile', 'matchedUser.profile.photos'],
+    });
+    if (!match) throw new NotFoundException('Match not found');
+    match.status = 'suggested';
+    match.currentStep = 0;
+    return this.matchRepo.save(match);
+  }
+
   async shortlist(matchId: string) {
     return this.updateMatchStatus(matchId, 'shortlisted');
   }
@@ -74,6 +85,10 @@ export class ShortlistService {
     return this.updateMatchStatus(matchId, 'reconsidered');
   }
 
+  async resetToSuggested(matchId: string) {
+    return this.updateMatchStatus(matchId, 'suggested');
+  }
+
   private async updateMatchStatus(matchId: string, status: string) {
     const match = await this.matchRepo.findOne({
       where: { id: matchId },
@@ -85,6 +100,7 @@ export class ShortlistService {
     if (status === 'shortlisted') match.currentStep = Math.max(match.currentStep, 1);
     if (status === 'interested') match.currentStep = Math.max(match.currentStep, 2);
     if (status === 'connected') match.currentStep = 3;
+    if (status === 'suggested') match.currentStep = 0;
 
     return this.matchRepo.save(match);
   }

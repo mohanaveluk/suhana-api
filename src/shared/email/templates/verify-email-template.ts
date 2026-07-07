@@ -162,7 +162,7 @@ function quotedBlock(text: string, label = 'Message'): string {
     <tr>
       <td width="4" style="background:${C.maroon};border-radius:2px;"></td>
       <td style="padding:12px 16px;background:${C.ivoryWarm};border-radius:0 8px 8px 0;">
-        <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:14px;
+        <p style="margin:0;font-family:${C.fontname};font-size:14px;
                   color:${C.textPrimary};line-height:1.75;font-style:italic;">${text}</p>
       </td>
     </tr>
@@ -1724,9 +1724,9 @@ export const feedbackReplyTemplate = (params: {
         <tr>
           <td style="background:${C.blush};border-top:1px solid ${C.roseGoldLighter};
                      padding:22px 40px;">
-            <p style="margin:0 0 3px;font-family:Georgia,'Times New Roman',serif;
+            <p style="margin:0 0 3px;font-family:${C.fontname};
                       font-size:15px;color:${C.textPrimary};">Warm regards,</p>
-            <p style="margin:0 0 2px;font-family:Georgia,'Times New Roman',serif;
+            <p style="margin:0 0 2px;font-family:${C.fontname};
                       font-size:16px;font-weight:700;color:${C.maroon};">
               The Suhana Matrimony Team
             </p>
@@ -1748,6 +1748,291 @@ export const feedbackReplyTemplate = (params: {
               <a href="mailto:support@${domain}"
                  style="color:${C.maroon};text-decoration:none;font-weight:600;">
                 support@${domain}</a>
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`.trim();
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Template 8 — shareProfileEmailTemplate
+//
+//  Sent when a Suhana Matrimony member shares another member's profile link
+//  with someone — could be a friend, family member, or another member.
+//
+//  Accepts:
+//    senderName    — person doing the sharing (appears in sign-off)
+//    receiverName  — person receiving this email (appears in greeting)
+//    profileUrl    — the full URL to the shared profile
+//    subject       — optional custom subject line text (default provided)
+//    body          — optional personal message from the sender (shown as a
+//                    quoted note; if omitted, a warm default is used)
+//    domain        — used for footer support link
+// ─────────────────────────────────────────────────────────────────────────────
+export const shareProfileEmailTemplate = (params: {
+  senderName:    string;
+  receiverName:  string;
+  profileUrl:    string;
+  subject?:      string;
+  body?:         string;
+  domain:        string;
+}): string => {
+
+  const { senderName, receiverName, profileUrl, domain } = params;
+  const year = new Date().getFullYear();
+  const heartIconSrc  = "https://storage.googleapis.com/inv-images/home/fav-flrnd.png";
+
+  // Encode the profile URL defensively so spaces/special chars in the
+  // GCS filename never produce a broken href (see image-url encoding note)
+  const safeUrl = (() => {
+    try {
+      const u = new URL(profileUrl);
+      u.pathname = u.pathname
+        .split('/')
+        .map(seg => encodeURIComponent(decodeURIComponent(seg)))
+        .join('/');
+      return u.toString();
+    } catch {
+      return profileUrl;
+    }
+  })();
+
+  // Personal message — use caller's text or a warm default
+  const personalNote = (params.body ?? '').trim()
+    || `I came across this profile on Suhana Matrimony and thought it might be a great match for you. Take a look and let me know what you think!`;
+
+  // Email subject line — caller can override
+  const emailSubject = (params.subject ?? '').trim()
+    || `${senderName} shared a profile with you on Suhana Matrimony`;
+
+  // Sender initial for the sign-off avatar
+  const initial = senderName.trim().charAt(0).toUpperCase() || 'S';
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>${emailSubject}</title>
+</head>
+<body style="margin:0;padding:0;background-color:${C.blush};
+             font-family:${C.fontname};">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background-color:${C.blush};padding:40px 16px;">
+    <tr><td align="center">
+
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="max-width:600px;background:#ffffff;border-radius:20px;
+                    box-shadow:0 8px 32px ${C.shadow};overflow:hidden;">
+
+        <!-- ════════════════════════════
+             HEADER — same gradient & icon
+             pattern as every other template
+             ════════════════════════════ -->
+        <tr>
+          <td style="background:${C.maroon};background:${C.gradient};
+                     padding:40px 40px 32px;text-align:center;">
+
+            <!-- Share icon inside frosted circle -->
+              <div style="display:inline-block;background:rgba(255,255,255,0.78);
+                          border-radius:50px;padding:3px;margin-bottom:18px;">
+                <img src="${heartIconSrc}" alt="Verification icon"
+                     width="60" height="60" style="display:block;border:0;" />
+              </div>                        
+
+            <h1 style="margin:0 0 8px;font-family:${C.fontname};
+                       font-size:24px;font-weight:700;color:#ffffff;
+                       letter-spacing:-0.3px;">
+              Someone Shared a Profile With You!
+            </h1>
+            <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.82);line-height:1.5;font-family:${C.fontname};">
+              A Suhana Matrimony member thinks this could be your perfect match
+            </p>
+
+            <!-- Gold badge -->
+            <div style="display:inline-block;background:rgba(201,168,76,0.22);
+                        border:1px solid rgba(201,168,76,0.45);border-radius:50px;
+                        padding:6px 18px;margin-top:16px;">
+              <span style="font-size:12px;font-weight:600;
+                           color:${C.goldLight};letter-spacing:0.3px;
+                           font-family:Arial,Helvetica,sans-serif;">
+                &#10024;&nbsp; Shared by ${senderName}
+              </span>
+            </div>
+          </td>
+        </tr>
+
+        <!-- ════════════════
+             BODY
+             ════════════════ -->
+        <tr>
+          <td style="padding:40px 40px 32px;">
+
+            <!-- Greeting -->
+            <p style="margin:0 0 6px;font-size:16px;color:${C.textPrimary};
+                      line-height:1.7;">
+              Dear <strong>${receiverName}</strong>,
+            </p>
+            <div style="width:40px;height:3px;background:${C.gradient};
+                        border-radius:2px;margin:0 0 20px;"></div>
+
+            <p style="margin:0 0 24px;font-family:Arial,Helvetica,sans-serif;
+                      font-size:15px;color:${C.textPrimary};line-height:1.8;">
+              <strong style="color:${C.maroon};">${senderName}</strong>
+              would like to share a profile from
+              <strong>Suhana Matrimony</strong> with you.
+            </p>
+
+            <!-- Personal note from sender — left-bordered quote -->
+            <div style="margin-bottom:28px;">
+              <p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;
+                        font-size:10px;font-weight:700;text-transform:uppercase;
+                        letter-spacing:1.4px;color:${C.roseGold};">
+                Message from ${senderName}
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td width="4" style="background:${C.maroon};border-radius:2px;"></td>
+                  <td style="padding:14px 18px;background:${C.ivoryWarm};
+                             border-radius:0 10px 10px 0;
+                             border:1px solid ${C.roseGoldLighter};
+                             border-left:none;">
+                    <p style="margin:0;font-family:${C.fontname};
+                              font-size:14px;color:${C.textPrimary};
+                              font-style:italic;line-height:1.75;">
+                      &ldquo;${personalNote}&rdquo;
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Profile URL display box -->
+            <div style="background:${C.roseGoldLighter};border-radius:12px;
+                        border:1px solid ${C.roseGoldLight};padding:20px 22px;
+                        margin-bottom:28px;">
+              <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;
+                        font-size:10px;font-weight:700;text-transform:uppercase;
+                        letter-spacing:1.4px;color:${C.roseGold};">
+                Shared Profile Link
+              </p>
+              <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:13px;">
+                <a href="${safeUrl}"
+                   style="color:${C.maroon};text-decoration:none;
+                          word-break:break-all;font-weight:600;">
+                  ${safeUrl}
+                </a>
+              </p>
+              <p style="margin:6px 0 0;font-family:Arial,Helvetica,sans-serif;
+                        font-size:11px;color:${C.textSecondary};">
+                Click the link or use the button below to view the profile
+              </p>
+            </div>
+
+            <!-- Primary CTA -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="margin-bottom:28px;">
+              <tr>
+                <td align="center">
+                  <a href="${safeUrl}"
+                     style="display:inline-block;
+                            background:${C.maroon};background:${C.gradient};
+                            color:#ffffff;text-decoration:none;
+                            font-family:Arial,Helvetica,sans-serif;
+                            font-size:15px;font-weight:700;
+                            padding:15px 40px;border-radius:50px;
+                            box-shadow:0 6px 20px rgba(162,0,0,0.32);
+                            letter-spacing:0.3px;">
+                    &#128100;&nbsp; View Profile
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Privacy note -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="background:${C.goldLight};border-left:4px solid ${C.gold};
+                           border-radius:6px;padding:13px 18px;">
+                  <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
+                            font-size:13px;color:${C.maroonDark};line-height:1.65;">
+                    <strong>&#128274;&nbsp; Your privacy is protected.</strong>
+                    <span style="color:${C.textSecondary};">
+                      Contact details are only shared once both members choose
+                      to connect on Suhana Matrimony.
+                    </span>
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+
+        <!-- ════════════════
+             SIGN-OFF — sender's
+             name + initial avatar
+             ════════════════ -->
+        <tr>
+          <td style="background:${C.ivoryWarm};border-top:1px solid ${C.roseGoldLighter};
+                     padding:24px 40px;">
+            <table cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <!-- Sender initial circle -->
+                <td width="44" valign="middle" style="padding-right:14px;">
+                  <div style="width:40px;height:40px;border-radius:50%;
+                              background:${C.maroon};background:${C.gradient};
+                              text-align:center;line-height:40px;
+                              font-family:${C.fontname};
+                              font-size:18px;font-weight:700;color:#ffffff;">
+                    ${initial}
+                  </div>
+                </td>
+                <!-- Text -->
+                <td valign="middle">
+                  <p style="margin:0 0 2px;font-family:${C.fontname};
+                            font-size:14px;color:${C.textSecondary};">
+                    Shared with love by
+                  </p>
+                  <p style="margin:0;font-family:${C.fontname};
+                            font-size:16px;font-weight:700;color:${C.maroon};">
+                    ${senderName}
+                  </p>
+                  <p style="margin:2px 0 0;font-family:${C.fontname};
+                            font-size:12px;color:${C.roseGold};">
+                    via Suhana Matrimony
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- ════════════════
+             FOOTER
+             ════════════════ -->
+        <tr>
+          <td style="background:${C.blush};border-top:1px solid ${C.roseGoldLight};
+                     padding:18px 40px;text-align:center;">
+            <p style="margin:0 0 4px;font-size:12px;color:${C.textSecondary};
+                      font-family:Arial,Helvetica,sans-serif;line-height:1.7;">
+              This profile was shared with you by a Suhana Matrimony member. &nbsp;
+              <a href="mailto:support@${domain}"
+                 style="color:${C.maroon};text-decoration:none;font-weight:600;">
+                Contact support</a>
+              if you have any concerns.
+            </p>
+            <p style="margin:0;font-size:11px;color:${C.roseGoldLight};
+                      font-family:Arial,Helvetica,sans-serif;">
+              © ${year} Suhana Matrimony &nbsp;&bull;&nbsp; Connecting hearts, building futures.
             </p>
           </td>
         </tr>
