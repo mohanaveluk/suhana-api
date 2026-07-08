@@ -8,6 +8,7 @@ import { Interest } from '../interests/entity/interest.entity';
 import { InterestsModule } from '../interests/interests.module';
 import { EmailModule } from 'src/shared/email/email.module';
 import { LogModule } from '../logger/log.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -15,13 +16,16 @@ import { LogModule } from '../logger/log.module';
     InterestsModule,
     EmailModule,
     LogModule,
+    ConfigModule
   ],
   controllers: [MatchesController],
   providers: [
     MatchesService,
     {
       provide: Anthropic,
-      useFactory: () => new Anthropic({ apiKey: process.env.CLAUDE_API_KEY }),
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) =>
+        new Anthropic({ apiKey: configService.get<string>('CLAUDE_API_KEY') }),
     },
   ],
   exports: [MatchesService],

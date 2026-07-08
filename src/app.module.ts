@@ -29,11 +29,14 @@ import { MatchFixedModule } from './modules/match-fixed/match-fixed.module';
 import { ImageModule } from './modules/image/image.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 
+const envFilePath = process.env.NODE_ENV === 'production'
+  ? '.env'
+  : ['.env', `.env.${process.env.NODE_ENV || 'development'}`];
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
+      envFilePath,
       load: [getDatabaseConfig, jwtConfig, adminConfig, googleCloudConfig, smtpConfig],
       isGlobal: true,
     }),
