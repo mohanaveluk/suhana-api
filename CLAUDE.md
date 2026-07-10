@@ -26,7 +26,7 @@ npm run format           # Prettier formatting
 
 ## Architecture
 
-**NestJS REST API** for a suhana/polling platform with multi-tenant dental clinic support. All routes are prefixed with `/api/v1`. API docs available at `/api-docs`.
+**NestJS REST API** for a suhana which is a beautiful and elegant choice for your matrimony business! It conveys a sense of a joyful, smooth, and beautiful journey, which is perfect for matchmaking. It has features like AI-based matchmaking, horoscope matching, and video profiles can make it unique All routes are prefixed with `/api/v1`. API docs available at `/api-docs`.
 
 ### Module Structure
 
@@ -34,14 +34,14 @@ Feature modules live in `src/modules/`. Each follows the pattern: `module.ts` �
 
 Key modules:
 - **suhana** — Core suhana creation and management
-- **vote** — suhana voting/polling logic
+- **sendInterest** — User sends his/her interest with other profile
 - **auth** — JWT authentication, password reset, login history (`src/modules/auth/`)
 - **user** — User profiles and management
 - **chat** — Claude AI (Anthropic SDK) chat integration at `POST /chat/request`
-- **appointment** — OpenDental API integration for dental appointments
-- **practice** / **clinic-keys** — Multi-tenant dental practice management
+- **profiles** — Suhana API integration manages user matrimony profiles
+- **matches** - Manages profile match technique interms of arithmatic logic 
 - **blog** — Posts, comments, likes, newsletter
-- **party** / **party-master** / **suhana-party** — Party/organization associations
+- **AI Horoscope match** - Leverage claude sonnet AI model to match the profiles
 - **country** — Candidate, constituency, state, district entities
 - **audit** — Global audit logging via interceptor
 

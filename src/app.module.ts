@@ -28,6 +28,8 @@ import { EmailHistoryModule } from './modules/email-history/email-history.module
 import { MatchFixedModule } from './modules/match-fixed/match-fixed.module';
 import { ImageModule } from './modules/image/image.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
+import { ChatbotModule } from './modules/chatbot/chatbot.module';
+import { SafetyTipsModule } from './modules/safety-tips/safety-tips.module';
 
 const envFilePath = process.env.NODE_ENV === 'production'
   ? '.env'
@@ -69,6 +71,8 @@ const envFilePath = process.env.NODE_ENV === 'production'
     MatchFixedModule,
     ImageModule,
     FeedbackModule,
+    ChatbotModule,
+    SafetyTipsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
