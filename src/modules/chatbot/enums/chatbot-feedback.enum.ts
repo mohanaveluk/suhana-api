@@ -1,0 +1,5 @@
+export enum ChatbotFeedbackRating {
+  HELPFUL = 'HELPFUL',
+  NOT_HELPFUL = 'NOT_HELPFUL',
+  NEEDS_IMPROVEMENT = 'NEEDS_IMPROVEMENT',
+}
