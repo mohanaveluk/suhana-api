@@ -1,4 +1,6 @@
-export type MessageSource = 'FAQ' | 'KNOWLEDGE' | 'AI' | 'CACHE' | 'NONE';
+import { ProfileSearchSummary } from './profile-search.interface';
+
+export type MessageSource = 'FAQ' | 'KNOWLEDGE' | 'AI' | 'CACHE' | 'NONE' | 'PROFILE_SEARCH';
 
 export interface ChatbotResponse {
   messageId: string;
@@ -8,6 +10,8 @@ export interface ChatbotResponse {
   suggestions: string[];
   tokensUsed?: number;
   responseTimeMs?: number;
+  type?: 'text' | 'profile-list';
+  profiles?: ProfileSearchSummary[];
 }
 
 export interface UserContextInfo {

@@ -16,6 +16,7 @@ import { ChatbotKnowledgeRepository } from './repositories/chatbot-knowledge.rep
 import { FaqSearchService } from './services/faq-search.service';
 import { KnowledgeSearchService } from './services/knowledge-search.service';
 import { MessageSearchService } from './services/message-search.service';
+import { ProfileSearchService } from './services/profile-search.service';
 
 import { ChatbotMessage } from './entities/chatbot-message.entity';
 import { ChatbotFeedback } from './entities/chatbot-feedback.entity';
@@ -49,6 +50,7 @@ export class ChatbotService {
     private readonly faqSearchService: FaqSearchService,
     private readonly knowledgeSearchService: KnowledgeSearchService,
     private readonly messageSearchService: MessageSearchService,
+    private readonly profileSearchService: ProfileSearchService,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(ChatbotFeedback)
     private readonly feedbackRepo: Repository<ChatbotFeedback>,
@@ -74,6 +76,37 @@ export class ChatbotService {
 
     let savedMessageId = null;
     let savedResponseTimeMs = 0;
+
+    // Step 0 — Profile search intent (e.g. "find matching profiles", "search caste Iyer")
+    if (this.profileSearchService.looksLikeProfileSearch(dto.message)) {
+      const intent = await this.profileSearchService.extractIntent(dto.message);
+      if (intent.isProfileSearch) {
+        const { results, oppositeGender } = await this.profileSearchService.searchProfiles(userId, intent.criteria);
+        const answer = this.profileSearchService.buildAnswerText(intent.criteria, oppositeGender, results.length);
+
+        const saved = await this.messageRepo.save({
+          sessionId: dto.sessionId,
+          userId,
+          role: MessageRole.USER,
+          message: dto.message,
+          response: answer,
+          source: 'PROFILE_SEARCH',
+          confidence: 1,
+          responseTimeMs: Date.now() - startTime,
+        });
+
+        return {
+          messageId: saved.id,
+          answer,
+          source: 'PROFILE_SEARCH',
+          confidence: 1,
+          suggestions: [],
+          type: 'profile-list',
+          profiles: results,
+          responseTimeMs: saved.responseTimeMs,
+        };
+      }
+    }
 
     // Step 1 — FAQ match
     const faqResult = await this.faqSearchService.search(dto.message);
