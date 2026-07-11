@@ -2,14 +2,17 @@ import {
   Controller, Get, Post, Put, Delete,
   Body, Param, Query, Request, UseGuards,
 } from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import {
   ApiTags, ApiOperation, ApiResponse, ApiBearerAuth,
   ApiParam, ApiQuery,
 } from '@nestjs/swagger';
 
 import { ChatbotService } from './chatbot.service';
+import { GuestChatbotResolverService } from './services/guest-chatbot-resolver.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { SendMessageDto } from './dto/send-message.dto';
+import { GuestMessageDto } from './dto/guest-message.dto';
 import { SubmitChatbotFeedbackDto } from './dto/chatbot-feedback.dto';
 import { SearchFaqDto } from './dto/search-faq.dto';
 import { CreateKnowledgeDto, UpdateKnowledgeDto } from './dto/manage-knowledge.dto';
@@ -17,13 +20,17 @@ import { CreateKnowledgeDto, UpdateKnowledgeDto } from './dto/manage-knowledge.d
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
+import { Public } from 'src/common/decorators/public.decorator';
 
 @ApiTags('Chatbot')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('chatbot')
 export class ChatbotController {
-  constructor(private readonly chatbotService: ChatbotService) {}
+  constructor(
+    private readonly chatbotService: ChatbotService,
+    private readonly guestChatbotResolverService: GuestChatbotResolverService,
+  ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SESSION
@@ -78,6 +85,33 @@ export class ChatbotController {
   @ApiResponse({ status: 404, description: 'Session not found' })
   sendMessage(@Request() req: any, @Body() dto: SendMessageDto) {
     return this.chatbotService.sendMessage(req.user.id, dto);
+  }
+
+  @Public()
+  @UseGuards(ThrottlerGuard)
+  @Post('public/message')
+  @ApiOperation({
+    summary: 'Send a message to the guest (unauthenticated) chatbot',
+    description: `Guest-safe chat flow — never calls the AI model:
+1. Profile/match/personalization intent → immediate "please log in" response
+2. FAQ search (confidence ≥ 90%) → instant answer
+3. Knowledge base search (confidence ≥ 80%) → knowledge answer
+4. Cached pre-approved answer search (confidence ≥ 85%) → cached answer
+5. No match → "please log in" fallback`,
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Guest answer with source and login requirement flag',
+    schema: {
+      example: {
+        source: 'faq',
+        answer: 'To send interest, go to a profile and click "Send Interest"...',
+        requiresLogin: false,
+      },
+    },
+  })
+  guestMessage(@Body() dto: GuestMessageDto) {
+    return this.guestChatbotResolverService.resolve(dto);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
