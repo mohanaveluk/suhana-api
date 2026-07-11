@@ -71,14 +71,37 @@ export class GuestChatbotResolverService {
       };
     }
 
-    if (this.isRestrictedIntent(message)) {
-      this.logger.log(`Guest asked restricted-intent question: "${this.truncate(message)}"`);
-      return { source: 'none', answer: LOGIN_REQUIRED_MESSAGE, requiresLogin: true };
-    }
-    
     const cachedResult = await this.messageSearchService.search(message);
     if (cachedResult && cachedResult.confidence >= CACHE_CONFIDENCE_THRESHOLD) {
       return { source: 'message', answer: cachedResult.cachedMessage.response, requiresLogin: false };
+    }
+
+    type MatchResult = {
+      confidence: number;
+      source: 'faq' | 'knowledgebase' | 'message';
+      answer: string;
+    };
+    const candidates: MatchResult[] = [
+      faqResult && { confidence: faqResult.confidence, source: 'faq' as const, answer: faqResult.faq.answer },
+      knowledgeResult && { confidence: knowledgeResult.confidence, source: 'knowledgebase' as const, answer: knowledgeResult.knowledge.content },
+      cachedResult && { confidence: cachedResult.confidence, source: 'message' as const, answer: cachedResult.cachedMessage.response },
+    ].filter((r): r is MatchResult => r !== null && r !== undefined);
+
+    if (candidates.length > 0) {
+      const bestMatch = candidates.reduce((prev, current) =>
+        prev.confidence > current.confidence ? prev : current
+      );
+
+      this.logger.log(
+        `Guest question matched via ${bestMatch.source} (confidence: ${bestMatch.confidence}, ${candidates.length} candidate(s)): "${this.truncate(message)}"`
+      );
+
+      return { source: bestMatch.source, answer: bestMatch.answer, requiresLogin: false };
+    }    
+    
+    if (this.isRestrictedIntent(message)) {
+      this.logger.log(`Guest asked restricted-intent question: "${this.truncate(message)}"`);
+      return { source: 'none', answer: LOGIN_REQUIRED_MESSAGE, requiresLogin: true };
     }
 
     this.logger.log(`Guest question had no FAQ/knowledge/cache match: "${this.truncate(message)}"`);
