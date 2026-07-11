@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule } from '@nestjs/throttler';
 import Anthropic from '@anthropic-ai/sdk';
 
 import { User } from '../user/entity/user.entity';
@@ -24,6 +25,7 @@ import { MessageSearchService } from './services/message-search.service';
 import { ChatbotService } from './chatbot.service';
 import { ChatbotController } from './chatbot.controller';
 import { ProfileSearchService } from './services/profile-search.service';
+import { GuestChatbotResolverService } from './services/guest-chatbot-resolver.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
@@ -38,7 +40,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       Profile,
       Interest,
     ]),
-    ConfigModule
+    ConfigModule,
+    // Scoped to this module only — guards against abuse/scraping of the
+    // guest FAQ endpoint. 10 requests/min per IP.
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 10 }]),
   ],
   controllers: [ChatbotController],
   providers: [
@@ -56,6 +61,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     KnowledgeSearchService,
     MessageSearchService,
     ProfileSearchService,
+    GuestChatbotResolverService,
     ChatbotService,
   ],
   exports: [ChatbotService],
