@@ -66,7 +66,7 @@ export class ProfilesService {
     if (search.ageMin) qb.andWhere('p.age >= :ageMin', { ageMin: search.ageMin });
     if (search.ageMax) qb.andWhere('p.age <= :ageMax', { ageMax: search.ageMax });
     if (search.query) {
-      qb.andWhere('(p.firstName LIKE :q OR p.lastName LIKE :q OR p.city LIKE :q OR p.occupationTitle LIKE :q OR p.educationLevel LIKE :q OR p.religion LIKE :q)', {
+      qb.andWhere('(p.firstName LIKE :q OR p.lastName LIKE :q OR p.city LIKE :q OR p.occupationTitle LIKE :q OR p.educationLevel LIKE :q OR p.religion LIKE :q OR p.gender LIKE :q)', {
         q: `%${search.query}%`,
       });
     }
