@@ -63,8 +63,15 @@ export class CreateMatchFixedDto {
 
   @ApiPropertyOptional({ description: 'Partner photo URL', example: 'https://storage.example.com/photo.jpg' })
   @IsOptional()
-  @IsString()
-  partnerPhotoUrl?: string;
+  partnerPhotoUrl?: { originalUrl?: string, displayUrl?: string, thumbnailUrl?: string };
+
+  @ApiPropertyOptional({ description: 'Engagement photo URL', example: 'https://storage.example.com/photo.jpg' })
+  @IsOptional()
+  engagementPhotoUrl?: { originalUrl?: string, displayUrl?: string, thumbnailUrl?: string };
+
+  @ApiPropertyOptional({ description: 'Wedding photo URL', example: 'https://storage.example.com/photo.jpg' })
+  @IsOptional()
+  weddingPhotoUrl?: { originalUrl?: string, displayUrl?: string, thumbnailUrl?: string };
 
   @ApiPropertyOptional({ description: 'Engagement date (YYYY-MM-DD)', example: '2026-03-15' })
   @IsOptional()

@@ -15,13 +15,13 @@ export class SuccessStoryResponseDto {
   profileImageUrl: string | null;
 
   @ApiPropertyOptional({ description: 'Partner photo URL' })
-  partnerPhotoUrl: string | null;
+  partnerPhotoUrl: { originalUrl?: string, displayUrl?: string, thumbnailUrl?: string } | null;
 
   @ApiPropertyOptional({ description: 'Engagement ceremony photo URL' })
-  engagementPhotoUrl: string | null;
+  engagementPhotoUrl: { originalUrl?: string, displayUrl?: string, thumbnailUrl?: string } | null;
 
   @ApiPropertyOptional({ description: 'Wedding ceremony photo URL' })
-  weddingPhotoUrl: string | null;
+  weddingPhotoUrl: { originalUrl?: string, displayUrl?: string, thumbnailUrl?: string } | null;
 
   @ApiPropertyOptional({ example: 'We found each other on Suhana and it was truly magical...' })
   successStory: string | null;

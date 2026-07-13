@@ -4,6 +4,7 @@ import {
 } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { ImageContext } from '../enums/image-context.enum';
+import { UploadedVariant } from '../dto/upload-image-body.dto';
 
 @Entity('uploaded_images')
 export class UploadedImage {
@@ -38,6 +39,15 @@ export class UploadedImage {
 
   @Column({ type: 'varchar', length: 100, name: 'mime_type', nullable: true })
   mimeType: string;
+
+  @Column({ type: 'text', name: 'display_url', nullable: true  })
+  displayUrl: string;
+
+  @Column({ type: 'text', name: 'thumbnail_url', nullable: true  })
+  thumbnailUrl: string;
+
+  @Column({ type: 'text', name: 'image_variant', nullable: true  })
+  imageVariant: UploadedVariant[];
 
   @Column({ type: 'boolean', name: 'is_deleted', default: false })
   isDeleted: boolean;

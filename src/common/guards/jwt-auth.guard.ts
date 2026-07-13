@@ -37,7 +37,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       // 💡 We're assigning the payload to the request object here so that we can access it in our route handlers
       console.log(payload);
       request['user'] = payload;
-    } catch(error) {
+    } catch (error: any) {
       if (error?.name === Constants.EXCEPTION.TOKEN_EXPIRED_ERROR) {
         throw new UnauthorizedException(Constants.AUTH.TOKEN_EXPIRED);
       }

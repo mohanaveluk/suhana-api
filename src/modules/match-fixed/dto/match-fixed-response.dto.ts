@@ -37,7 +37,7 @@ export class MatchFixedResponseDto {
   partnerLocation?: string;
 
   @ApiPropertyOptional({ example: 'https://storage.example.com/photo.jpg' })
-  partnerPhotoUrl?: string;
+  partnerPhotoUrl?: { originalUrl?: string, displayUrl?: string, thumbnailUrl?: string };
 
   @ApiPropertyOptional({ example: '2026-03-15' })
   engagementDate?: Date;

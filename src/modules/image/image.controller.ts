@@ -15,6 +15,7 @@ import { ImageContext } from './enums/image-context.enum';
 import { UploadImageBodyDto } from './dto/upload-image-body.dto';
 import {
   UploadImageResponseDto, ImageListResponseDto,
+  UploadImageVariantsResponseDto,
 } from './dto/image-response.dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { maxFileSize } from 'src/shared/utils/file-validation.util';
@@ -64,6 +65,39 @@ export class ImageController {
     }
     return this.imageService.uploadImage(req.user.id, file, context as ImageContext);
   }
+
+  @Post('upload-variants')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary: 'Upload an image with variants',
+    description:
+      'Uploads an image to Google Cloud Storage under the appropriate folder for the given context. ' +
+      'Accepted formats: jpg, jpeg, png, webp. Max size: 5 MB. ' +
+      'The upload is also recorded in the database for later retrieval.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UploadImageBodyDto })
+  @ApiResponse({ status: 201, description: 'Image uploaded and recorded', type: UploadImageResponseDto })
+  @ApiResponse({ status: 400, description: 'Invalid file type, size, or missing context' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'User or profile not found' })  
+  async uploadImageWithVariants(
+    @Request() req: any,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: maxFileSize }),
+          new FileTypeValidator({ fileType: /^image\/(jpeg|jpg|png|webp)$/ }),
+        ],
+        errorHttpStatusCode: 400,
+      }),
+    )    
+    file: Express.Multer.File,
+    @Body('context') context: ImageContext,
+  ): Promise<UploadImageVariantsResponseDto> {
+    return this.imageService.uploadImageWithVariants(req.user.id, file, context);
+  }
+
 
   // GET /images/my
   @Get('my')
