@@ -300,7 +300,7 @@ private async generateAndUploadVariants(
     if (config.width && config.height) {
       pipeline = pipeline.resize(config.width, config.height, {
         fit: 'cover',
-        position: 'attention', // smart-crop toward the most "interesting" region (faces etc.)
+        position: 'top', // smart-crop toward the most "interesting" region (faces etc.)
       });
     }
 
