@@ -53,15 +53,15 @@ export class MatchFixed {
   @Column({ nullable: true, length: 500 })
   partnerLocation: string;
 
-  @Column({ nullable: true, length: 500 })
-  partnerPhotoUrl: string;
+  @Column({ type: 'json', nullable: true})
+  partnerPhotoUrl?: { originalUrl?: string, displayUrl?: string, thumbnailUrl?: string };
 
   // Additional photo fields for homepage display
-  @Column({ nullable: true, length: 500 })
-  engagementPhotoUrl: string;
+  @Column({ type: 'json', nullable: true})
+  engagementPhotoUrl?: { originalUrl?: string, displayUrl?: string, thumbnailUrl?: string };
 
-  @Column({ nullable: true, length: 500 })
-  weddingPhotoUrl: string;
+  @Column({ type: 'json', nullable: true })
+  weddingPhotoUrl?: { originalUrl?: string, displayUrl?: string, thumbnailUrl?: string };
 
   @Column({ type: 'date', nullable: true })
   engagementDate: Date;

@@ -2,7 +2,7 @@ import {
   BadRequestException, ForbiddenException, Injectable, NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DeepPartial, Repository } from 'typeorm';
 
 import { MatchFixed } from './entity/match-fixed.entity';
 import { CreateMatchFixedDto } from './dto/create-match-fixed.dto';

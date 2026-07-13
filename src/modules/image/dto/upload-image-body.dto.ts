@@ -18,3 +18,12 @@ export class UploadImageBodyDto {
   })
   context: ImageContext;
 }
+
+
+export interface UploadedVariant {
+  suffix: string;
+  url: string;
+  width?: number | null;
+  height?: number | null;
+  size: number;
+}
