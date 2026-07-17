@@ -15,6 +15,8 @@ import {
   GalleryResponseDto,
 } from './dto/gallery-response.dto';
 import { User } from '../user/entity';
+import { ImageService } from '../image/image.service';
+import { ImageContext } from '../image/enums/image-context.enum';
 
 @Injectable()
 export class GalleryService {
@@ -24,6 +26,7 @@ export class GalleryService {
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     private readonly cloudStorageService: CloudStorageService,
+    private readonly imageService: ImageService
   ) {}
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -34,6 +37,7 @@ export class GalleryService {
       profileId:   gallery.profileId,
       imageUrl:    gallery.imageUrl,
       imageName:   gallery.imageName,
+      variants:    gallery.variants,
       imageSize:   gallery.imageSize,
       mimeType:    gallery.mimeType,
       uploadedBy:  gallery.uploadedBy,
@@ -89,6 +93,57 @@ export class GalleryService {
     }
   }
 
+  async uploadGalleryVariantImage(
+    profileId: string,
+    file: Express.Multer.File,
+    uploadedBy: string,
+  ): Promise<GalleryResponseDto> {
+    try {
+      // Validate file presence
+      if (!file) {
+        throw new BadRequestException('No file provided');
+      }
+
+      // Re-use the cloud service's built-in validator (mime + size)
+      await this.cloudStorageService.isFileValid(file);
+
+      const variants = await this.imageService.uploadImageWithVariants(uploadedBy, file, ImageContext.GALLERY);
+
+      if (variants.success) {
+        // Persist record
+        const gallery = this.galleryRepo.create({
+          profileId,
+          imageUrl: variants.data.thumbnailUrl,
+          variants: { originalUrl: variants.data?.originalUrl, displayUrl: variants.data?.displayUrl, thumbnailUrl: variants.data?.thumbnailUrl },
+          imageName: file.originalname,
+          imageSize: variants.data?.images?.imageSize,
+          mimeType: file.mimetype,
+          uploadedBy,
+          isDeleted: false,
+          deletedAt: null,
+        });
+        const saved = await this.galleryRepo.save(gallery);
+        return {
+          success: true,
+          message: 'Gallery image uploaded successfully',
+          data: this.toItemDto(saved),
+        };
+      }
+      else {
+        return {
+          success: false,
+          message: 'Gallery image upload failed',
+          data: null
+        };
+      }
+    } catch (err) {
+      if (err instanceof BadRequestException) throw err;
+      throw new InternalServerErrorException(
+        `Failed to upload gallery image: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      );
+    }
+  }  
+  
   // ── Fetch by Profile ───────────────────────────────────────────────────────
 
   async getGalleryByProfileId(profileId: string): Promise<GalleryListResponseDto> {

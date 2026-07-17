@@ -6,9 +6,11 @@ import { Gallery } from './entity/gallery.entity';
 import { CloudStorageService } from 'src/common/services/cloud-storage.service';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { User } from '../user/entity';
+import { ImageService } from '../image/image.service';
+import { ImageModule } from '../image/image.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Gallery, User])],
+  imports: [TypeOrmModule.forFeature([Gallery, User]), ImageModule],
   controllers: [GalleryController],
   providers: [GalleryService, CloudStorageService, JwtAuthGuard],
   exports: [GalleryService],

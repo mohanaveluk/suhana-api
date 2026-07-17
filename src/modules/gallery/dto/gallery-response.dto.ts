@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import PhotoVariant from 'src/shared/models/PhotoVariant';
 
 // ── Single Gallery Item ───────────────────────────────────────────────────────
 
@@ -11,6 +12,9 @@ export class GalleryItemDto {
 
   @ApiProperty({ example: 'https://storage.googleapis.com/bucket/matrimony/gallery/abc/uuid-photo.jpg' })
   imageUrl: string;
+
+  @ApiProperty({example: {originalUrl:'', displayUrl: '', thumbnailUrl: ''}})
+  variants: PhotoVariant
 
   @ApiPropertyOptional({ example: 'profile-photo.jpg' })
   imageName: string;

@@ -77,7 +77,8 @@ export class GalleryController {
     )
     file: Express.Multer.File,
   ): Promise<GalleryResponseDto> {
-    return this.galleryService.uploadGalleryImage(profileId, file, req.user.id);
+    //return this.galleryService.uploadGalleryImage(profileId, file, req.user.id);
+    return this.galleryService.uploadGalleryVariantImage(profileId, file, req.user.id);
   }
 
   // ── GET /gallery/profile/:profileId ───────────────────────────────────────

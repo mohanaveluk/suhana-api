@@ -270,11 +270,19 @@ export function computeCompatibilityRules(a: Profile, b: Profile) {
         religion: 0.20, familyValues: 0.20, education: 0.15, career:       0.25,
         motherTongue: 0.15, location: 0.10, ageGap: 0.10, income: 0.10,
     };
-    const total = Math.round(
-        Object.entries(breakdown).reduce(
-            (sum, [k, v]) => sum + v * (weights[k as keyof typeof weights] ?? 0.1), 0
-        )
-    );
+
+    // Normalise by the actual sum of the weights used. These weights sum to 1.25
+    // (not 1.0), so a plain weighted sum could exceed 100%. Dividing by the weight
+    // sum turns this into a true weighted average — guaranteed to stay within the
+    // 0–100 range of the individual sub-scores while preserving their relative pull.
+    const entries = Object.entries(breakdown);
+    const getWeight = (k: string) => weights[k as keyof typeof weights] ?? 0.1;
+    const weightSum = entries.reduce((sum, [k]) => sum + getWeight(k), 0);
+    const weighted = entries.reduce((sum, [k, v]) => sum + v * getWeight(k), 0);
+
+    // Math.min/max is a defensive cap so the score can never render above 100%.
+    const total = Math.min(100, Math.max(0, Math.round(weighted / weightSum)));
+
     return { total, breakdown };
 }
 

@@ -151,7 +151,7 @@ export class ImageService {
           displayUrl: this.findUrlBySuffix(uploadedVariants, 'display'),
           thumbnailUrl: this.findUrlBySuffix(uploadedVariants, 'thumbnail'),
           imageName: `${baseName}-${this.getExtension(file.originalname)}`,
-          imageSize: file.size,
+          imageSize: this.findSizeBySuffix(uploadedVariants, 'original'),
           mimeType: file.mimetype,
           //imageVariant: imageVariant,
           isDeleted: false,
@@ -318,6 +318,10 @@ private async generateAndUploadVariants(
 
   private findUrlBySuffix(entities: UploadedVariant[], suffix: string): string | null {
     return entities.find((e) => e.suffix === suffix)?.url ?? null;
+  }  
+
+  private findSizeBySuffix(entities: UploadedVariant[], suffix: string): number | null {
+    return entities.find((e) => e.suffix === suffix)?.size ?? null;
   }  
 
   private findBySuffix(
