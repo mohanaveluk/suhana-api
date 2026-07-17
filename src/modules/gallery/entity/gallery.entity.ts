@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Profile } from '../../user/entity/profile.entity';
+import PhotoVariant from '../../../shared/models/PhotoVariant';
 
 @Entity('gallery')
 export class Gallery {
@@ -33,6 +34,9 @@ export class Gallery {
   // ── Image Metadata ─────────────────────────────────────────────────────────
   @Column({ type: 'text', name: 'image_url' })
   imageUrl: string;
+
+  @Column({ type: 'json', nullable: true })
+  variants: PhotoVariant;
 
   @Column({ type: 'varchar', length: 255, name: 'image_name', nullable: true })
   imageName: string;

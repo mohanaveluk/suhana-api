@@ -43,7 +43,8 @@ export class ProfilesService {
     } else {
       qb.where('p.status = :status', { status: queryStatus })
         .andWhere('u.is_active = :isActive', { isActive: 1, })
-        .andWhere('p.is_searchable = :isSearchable', { isSearchable: 1 });
+        .andWhere('p.is_searchable = :isSearchable', { isSearchable: 1 })
+        .andWhere('photos.isActive = :isActive', { isActive: 1 });
     }      
 
     if (search.gender) qb.andWhere('p.gender = :gender', { gender: search.gender });
@@ -70,6 +71,7 @@ export class ProfilesService {
         q: `%${search.query}%`,
       });
     }
+    qb.addOrderBy('p.createdAt', 'DESC')
     qb.addOrderBy('photos.isPrimary', 'DESC')
 
     const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
@@ -87,7 +89,7 @@ export class ProfilesService {
 
   async findById(id: string) {
     const profile = await this.profileRepo.findOne({
-      where: { id, user: {is_active: 1} },
+      where: { id, user: {is_active: 1}, photos: { isActive: 1 } },
       relations: ['photos', 'user'],
     });
     if (!profile) throw new NotFoundException('Profile not found');
@@ -102,7 +104,7 @@ export class ProfilesService {
 
   async findByCode(id: string) {
     const profile = await this.profileRepo.findOne({
-      where: { profileCode: id },
+      where: { profileCode: id , photos: { isActive: 1 }, user: {is_active: 1} },
       relations: ['photos', 'user'],
     });
     if (!profile) throw new NotFoundException('Profile not found');
@@ -116,7 +118,7 @@ export class ProfilesService {
 
   async findByUserId(userId: string) {
     const user = await this.userRepo.findOne({
-      where: { id: userId },
+      where: { id: userId, profile: { photos: { isActive: 1 } }, is_active: 1 },
       relations: ['profile', 'profile.photos'],
     });
 
@@ -131,7 +133,7 @@ export class ProfilesService {
 
   async findByEmailId(email: string) {
     const user = await this.userRepo.findOne({
-      where: { email: email },
+      where: { email: email, profile: { photos: { isActive: 1 } }, is_active: 1 },
       relations: ['profile', 'profile.photos'],
     });
     if (!user?.profile) throw new NotFoundException('Profile not found');
@@ -162,7 +164,12 @@ export class ProfilesService {
       });
       if (!user?.profile) throw new NotFoundException('Profile not found');
 
-      Object.assign(user.profile, dto);
+      // Photos are managed via dedicated endpoints (uploadProfileImage/addPhoto/deletePhoto).
+      // Never let the profile update touch the eagerly-loaded `photos` collection: because the
+      // relation is { cascade: true }, overwriting it with the DTO's (often empty) `photos`
+      // makes TypeORM treat the existing rows as orphans and nullify their `profileId`.
+      const { photos, ...profileData } = dto as any;
+      Object.assign(user.profile, profileData);
       user.profile.firstName = user.first_name = dto.firstName || user.profile.firstName;
       user.profile.lastName = user.last_name = dto.lastName || user.profile.lastName;
       user.profile.age = dto.age || user.profile.age;
@@ -198,9 +205,14 @@ export class ProfilesService {
         documentUrl: dto.horoscope?.documentUrl || user.profile.horoscope?.documentUrl,
       };
       user.profile.horoscopeDocUrl = dto.horoscope?.documentUrl || user.profile.horoscopeDocUrl;
-
+      // user.profile.photos.forEach((photo) => {
+      //   const updatedPhoto = dto.photos?.find((p) => p.id === photo.id);
+      //   if (updatedPhoto) {
+      //     photo.profileId = user.profile.id;
+      //   }
+      // });
       user.profile.profileCompleteness = this.calculateCompleteness(user.profile);
-      const userSaved = await this.userRepo.save(user);
+      //const userSaved = await this.userRepo.save(user);
       const saved = await this.profileRepo.save(user.profile);
 
 
@@ -225,9 +237,21 @@ export class ProfilesService {
         this.lookupService.upsertOccupation(saved.occupationTitle),
       ]);
 
+      // if dto.photos && dto.photos.length > 0, call the this.addPhoto for length of the photos array
       if (dto.photos && dto.photos.length > 0) {
-        await this.addPhoto(userId, dto.photos?.[0]?.url, dto.photos?.[0]?.isPrimary);
+        const existingPhoto = await this.photoRepo.find({ where: { profile: { id: user.profile.id } } });
+        if (existingPhoto) {
+          existingPhoto.forEach((photo) => {
+            photo.isActive = 0;
+          });
+          await this.photoRepo.save(existingPhoto);
+        }
+        await Promise.all(dto.photos.map((photo) => this.addPhoto(userId, photo.url, photo.variants, photo.isPrimary)));
       }
+
+      // if (dto.photos && dto.photos.length > 0) {
+      //   await this.addPhoto(userId, dto.photos?.[0]?.url, dto.photos?.[0]?.variants, dto.photos?.[0]?.isPrimary);
+      // }
       return this.toProfileResponse(saved);
       
     } catch (err) {
@@ -236,20 +260,24 @@ export class ProfilesService {
     }
   }
 
-  async addPhoto(userId: string, url: string, isPrimary = false) {
+  async addPhoto(userId: string, url: string, variants: any,  isPrimary = false) {
     const user = await this.userRepo.findOne({
       where: { id: userId },
       relations: ['profile'],
     });
     if (!user?.profile) throw new NotFoundException('Profile not found');
 
-    const existingPhoto = await this.photoRepo.findOne({ where: { url, profile: { id: user.profile.id } } });
-    if (existingPhoto) {
-      existingPhoto.isPrimary = isPrimary;
-      return this.photoRepo.save(existingPhoto);
-    }
+    // const existingPhoto = await this.photoRepo.findOne({ where: { profile: { id: user.profile.id } } });
+    // //const existingPhoto = await this.photoRepo.findOne({ where: { url, profile: { id: user.profile.id } } });
+    // if (existingPhoto) {
+    //   // existingPhoto.url = url;
+    //   // existingPhoto.variants = { ...existingPhoto.variants, originalUrl: url };
+    //   // existingPhoto.isPrimary = isPrimary;
+    //   existingPhoto.isActive = 0;
+    //   await this.photoRepo.save(existingPhoto);
+    // }
     
-    const photo = this.photoRepo.create({ url, isPrimary, profile: user.profile });
+    const photo = this.photoRepo.create({ url, variants, isPrimary, profile: user.profile });
     return this.photoRepo.save(photo);
   }
 
@@ -407,6 +435,8 @@ export class ProfilesService {
       photos: (profile.photos || []).map((ph) => ({
         id: ph.id,
         url: ph.url,
+        variants: ph.variants,
+        createdAt: ph.createdAt,
         isPrimary: ph.isPrimary,
         isVerified: ph.isVerified,
       })),

@@ -93,6 +93,7 @@ export class MatchFixedService {
     matchFixed.status = MatchFixedStatus.CANCELLED;
     matchFixed.updatedBy = userId;
     await this.matchFixedRepo.save(matchFixed);
+    await this.unLockProfile(userId);
     return { message: 'Match Fixed record cancelled successfully' };
   }
 
@@ -291,6 +292,22 @@ export class MatchFixedService {
     profile.acceptNewInterest = false;
     profile.acceptNewChat = false;
     profile.showInFeatured = false;
+    await this.profileRepo.save(profile);
+  }
+
+    private async unLockProfile(userId: string): Promise<void> {
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+      relations: ['profile'],
+    });
+    if (!user?.profile) return;
+
+    const profile = user.profile;
+    profile.profileStatus = ProfileStatus.ACTIVE;
+    profile.isSearchable = true;
+    profile.acceptNewInterest = true;
+    profile.acceptNewChat = true;
+    profile.showInFeatured = true;
     await this.profileRepo.save(profile);
   }
 

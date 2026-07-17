@@ -8,6 +8,7 @@ import { EDUCATION_TIER } from './matches-lookup';
 import { scoreAgeGap, scoreIncome, scoreMotherTongue, computeCompatibilityRules, generateBadges } from '../../shared/matches/matches.helper';
 import { Badge } from 'src/shared/matches/matches.model';
 import { InterestsService } from '../interests/interests.service';
+import { match } from 'assert';
 
 type TextBlock = Anthropic.Messages.TextBlock;
 
@@ -83,6 +84,14 @@ export class MatchesService {
           }),
         ),
       ),
+    );
+
+    // Update existingMatches with new datetime for suggestedAt
+    await Promise.all(
+      existingMatches.map(async (match) => {
+        match.suggestedAt = new Date();
+        await this.matchRepo.save(match);
+      }),
     );
 
     // Consolidate all match IDs (cached + newly saved)
@@ -168,7 +177,7 @@ export class MatchesService {
     const matches = await this.matchRepo.find({
       where: { userId },
       relations: ['matchedUser', 'matchedUser.profile', 'matchedUser.profile.photos'],
-      order: { matchPercentage: 'DESC' },
+      order: { suggestedAt: 'DESC' },
     });
     return this.formatMatches(matches);
   }
@@ -177,7 +186,7 @@ export class MatchesService {
     const match = await this.matchRepo.findOne({
       where: { userId, matchedUserId },
       relations: ['matchedUser', 'matchedUser.profile', 'matchedUser.profile.photos'],
-      order: { matchPercentage: 'DESC' },
+      order: { suggestedAt: 'DESC' },
     });
     return this.formatMatch(match);
   }

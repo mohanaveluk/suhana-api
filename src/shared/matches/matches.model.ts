@@ -3,3 +3,4 @@ export interface Badge {
   icon: string;
   score: number;
 }
+
