@@ -44,7 +44,7 @@ export class ProfilesService {
       qb.where('p.status = :status', { status: queryStatus })
         .andWhere('u.is_active = :isActive', { isActive: 1, })
         .andWhere('p.is_searchable = :isSearchable', { isSearchable: 1 })
-        .andWhere('photos.isActive = :isActive', { isActive: 1 });
+        //.andWhere('photos.isActive = :isActive', { isActive: 1 });
     }      
 
     if (search.gender) qb.andWhere('p.gender = :gender', { gender: search.gender });
@@ -76,6 +76,14 @@ export class ProfilesService {
 
     const [data, total] = await qb.skip(skip).take(limit).getManyAndCount();
 
+    data.forEach(profile => {
+      if (profile.photos?.length > 0) {
+        profile.photos = profile.photos.filter(
+          photo => photo.isActive === 1
+        );
+      }
+    });    
+    
     return {
       data: data.map((p) => this.toProfileResponse(p)),
       total,
