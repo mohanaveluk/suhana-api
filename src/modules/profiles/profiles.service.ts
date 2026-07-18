@@ -83,7 +83,7 @@ export class ProfilesService {
         );
       }
     });    
-    
+
     return {
       data: data.map((p) => this.toProfileResponse(p)),
       total,
@@ -97,12 +97,13 @@ export class ProfilesService {
 
   async findById(id: string) {
     const profile = await this.profileRepo.findOne({
-      where: { id, user: {is_active: 1}, photos: { isActive: 1 } },
+      where: { id, user: {is_active: 1} },
       relations: ['photos', 'user'],
     });
     if (!profile) throw new NotFoundException('Profile not found');
 
     if (profile?.photos?.length) {
+      profile.photos = profile.photos.filter(photo => photo.isActive = 1);
       profile.photos.sort(
         (a, b) => Number(b.isPrimary) - Number(a.isPrimary)
       );
@@ -112,11 +113,12 @@ export class ProfilesService {
 
   async findByCode(id: string) {
     const profile = await this.profileRepo.findOne({
-      where: { profileCode: id , photos: { isActive: 1 }, user: {is_active: 1} },
+      where: { profileCode: id , user: {is_active: 1} },
       relations: ['photos', 'user'],
     });
     if (!profile) throw new NotFoundException('Profile not found');
     if (profile?.photos?.length) {
+      profile.photos = profile.photos.filter(photo => photo.isActive = 1);
       profile.photos.sort(
         (a, b) => Number(b.isPrimary) - Number(a.isPrimary)
       );
