@@ -118,12 +118,19 @@ export class ProfilesService {
 
   async findByUserId(userId: string) {
     const user = await this.userRepo.findOne({
-      where: { id: userId, profile: { photos: { isActive: 1 } }, is_active: 1 },
+      where: { id: userId, is_active: 1 },
       relations: ['profile', 'profile.photos'],
     });
 
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
     if (!user?.profile) throw new NotFoundException('Profile not found');
     if (user?.profile?.photos?.length) {
+      user.profile.photos = user.profile.photos.filter(
+        photo => photo.isActive === 1,
+      );      
       user.profile.photos.sort(
         (a, b) => Number(b.isPrimary) - Number(a.isPrimary)
       );
@@ -133,12 +140,15 @@ export class ProfilesService {
 
   async findByEmailId(email: string) {
     const user = await this.userRepo.findOne({
-      where: { email: email, profile: { photos: { isActive: 1 } }, is_active: 1 },
+      where: { email: email, is_active: 1 },
       relations: ['profile', 'profile.photos'],
     });
     if (!user?.profile) throw new NotFoundException('Profile not found');
     
     if (user?.profile?.photos?.length) {
+      user.profile.photos = user.profile.photos.filter(
+        photo => photo.isActive === 1,
+      );         
       user.profile.photos.sort(
         (a, b) => Number(b.isPrimary) - Number(a.isPrimary)
       );
@@ -212,7 +222,7 @@ export class ProfilesService {
       //   }
       // });
       user.profile.profileCompleteness = this.calculateCompleteness(user.profile);
-      //const userSaved = await this.userRepo.save(user);
+      const userSaved = await this.userRepo.save(user);
       const saved = await this.profileRepo.save(user.profile);
 
 
