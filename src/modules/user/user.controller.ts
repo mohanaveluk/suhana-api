@@ -99,8 +99,8 @@ export class UserController {
     @UseGuards(JwtAuthGuard)
     @ApiOperation({ summary: 'Reveal phone number (premium feature)' })
     @ApiResponse({ status: 200, description: 'User phone number' })
-    getPhone(@Param('id') id: string) {
-        return this.userService.getPhone(id);
+    getPhone(@Param('id') id: string, @Request() req: any) {
+        return this.userService.getPhone(req.user.id, id);
     }
 
     @Post(':id/block')

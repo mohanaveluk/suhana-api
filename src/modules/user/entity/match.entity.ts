@@ -25,17 +25,11 @@ export class Match {
   @Column({ type: 'float', default: 0 })
   matchPercentage: number;
 
+  // Keyed score map. Different scorers write different key sets into this JSON
+  // column (rule-based: religion/motherTongue/ageGap/income/…; random: lifestyle/
+  // interests/emotional/…), so keep the type open rather than a fixed shape.
   @Column({ type: 'json', nullable: true })
-  compatibilityBreakdown: {
-    lifestyle: number;
-    education: number;
-    location: number;
-    familyValues: number;
-    interests: number;
-    career: number;
-    emotional: number;
-    horoscope?: number;
-  };
+  compatibilityBreakdown: Record<string, number>;
 
   @Column({ type: 'text', nullable: true })
   explanationText: string;

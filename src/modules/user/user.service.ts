@@ -2,12 +2,13 @@
 https://docs.nestjs.com/providers#services
 */
 
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserRepository } from './user.repository';
 import { User, UserBlock, UserReport } from './entity';
 import { RoleEntity } from './entity/roles.entity';
+import { Membership } from './enums/profile-status.enum';
 
 @Injectable()
 export class UserService {
@@ -93,7 +94,14 @@ export class UserService {
     return { userId, isOnline, lastActive: user.last_active };
   }
 
-  async getPhone(targetUserId: string) {
+  async getPhone(userId: string, targetUserId: string) {
+    const loggedUser = await this.userRepo.findOne({ where: { id: userId } });
+    if (!loggedUser) throw new NotFoundException('User not found');
+
+    if (loggedUser.membership != Membership.PLATINUM && loggedUser.membership != Membership.GOLD) {
+      throw new ConflictException("Phone number available for gold and platinum  members only");
+    }
+
     const user = await this.userRepo.findOne({ where: { id: targetUserId }, select: ['id', 'mobile'] });
     if (!user) throw new NotFoundException('User not found');
     return { userId: targetUserId, mobile: user.mobile };
