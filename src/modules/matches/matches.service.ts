@@ -51,54 +51,51 @@ export class MatchesService {
       .take(count)
       .getMany();
 
-    // Single batch query — find which candidates already have a stored match record
+    // Single batch query — find which candidates already have a stored match record.
+    // Guard the empty case: In([]) can behave oddly across drivers, and there is
+    // nothing to look up when no candidates were pulled.
     const candidateUserIds = candidates.map(c => c.user.id);
-    const existingMatches = await this.matchRepo.find({
-      where: { userId, matchedUserId: In(candidateUserIds) },
-    });
+    const existingMatches = candidateUserIds.length
+      ? await this.matchRepo.find({
+          where: { userId, matchedUserId: In(candidateUserIds) },
+        })
+      : [];
     const existingMatchMap = new Map(existingMatches.map(m => [m.matchedUserId, m]));
 
-    // Only run scoring + AI for candidates not already in the DB
-    const newCandidates = candidates.filter(c => !existingMatchMap.has(c.user.id));
-
-    const newMatchResults = await Promise.all(
-      newCandidates.map(async (candidate) => {
+    // Upsert each candidate: update the existing row in place, or insert a new one.
+    // This prevents duplicate (userId, matchedUserId) rows. AI enrichment runs ONLY
+    // for brand-new matches — existing rows keep their cached explanation/badges and
+    // just get their rule-based scores + suggestedAt refreshed.
+    const savedMatches = await Promise.all(
+      candidates.map(async (candidate) => {
+        const candidateUserId = candidate.user.id;
         const baseScores = computeCompatibilityRules(user.profile, candidate);
-        const enriched = await this.enrichWithAI(user.profile, candidate, baseScores);
-        return { candidate, baseScores, enriched };
-      }),
-    );
+        const existing = existingMatchMap.get(candidateUserId);
 
-    // Persist new matches
-    const savedNewMatches = await Promise.all(
-      newMatchResults.map(({ candidate, baseScores, enriched }) =>
-        this.matchRepo.save(
+        if (existing) {
+          existing.matchPercentage = baseScores.total;
+          existing.compatibilityBreakdown = baseScores.breakdown;
+          existing.suggestedAt = new Date();
+          return this.matchRepo.save(existing);
+        }
+
+        const enriched = await this.enrichWithAI(user.profile, candidate, baseScores);
+        return this.matchRepo.save(
           this.matchRepo.create({
             userId,
-            matchedUserId: candidate.user.id,
+            matchedUserId: candidateUserId,
             matchPercentage: baseScores.total,
             compatibilityBreakdown: baseScores.breakdown,
             explanationText: enriched.explanation,
             badges: enriched.badges,
             status: 'suggested',
           }),
-        ),
-      ),
-    );
-
-    // Update existingMatches with new datetime for suggestedAt
-    await Promise.all(
-      existingMatches.map(async (match) => {
-        match.suggestedAt = new Date();
-        await this.matchRepo.save(match);
+        );
       }),
     );
 
-    // Consolidate all match IDs (cached + newly saved)
-    const allMatchIds = [
-      ...existingMatches.map(m => m.id),
-      ...savedNewMatches.map(m => m.id),
-    ];
+    // Consolidate all match IDs (updated + newly inserted)
+    const allMatchIds = savedMatches.map(m => m.id);
 
     const matchesWithRelations = await this.matchRepo.find({
       where: { id: In(allMatchIds) },
@@ -106,7 +103,44 @@ export class MatchesService {
       order: { matchPercentage: 'DESC' },
     });
 
-    return this.formatMatches(matchesWithRelations);
+    // Attach the interest status (pending/accepted/declined) between the current
+    // user and each matched user, looked up in either direction.
+    const interestStatusMap = await this.buildInterestStatusMap(
+      userId,
+      matchesWithRelations.map(m => m.matchedUserId),
+    );
+
+    return this.formatMatches(matchesWithRelations, interestStatusMap);
+  }
+
+  /**
+   * Build a map of `otherUserId -> interest status` for the given user against a set
+   * of other users. An interest between the pair is matched in EITHER direction
+   * (current user as sender or receiver). When more than one interest exists for a
+   * pair, the most recent one wins.
+   */
+  private async buildInterestStatusMap(
+    userId: string,
+    otherUserIds: string[],
+  ): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    if (!otherUserIds.length) return map;
+
+    const interests = await this.interestRepo.find({
+      where: [
+        { fromUserId: userId, toUserId: In(otherUserIds) },
+        { toUserId: userId, fromUserId: In(otherUserIds) },
+      ],
+      order: { createdAt: 'DESC' },
+    });
+
+    for (const interest of interests) {
+      // The counterpart user relative to the current user
+      const otherId = interest.fromUserId === userId ? interest.toUserId : interest.fromUserId;
+      // Ordered by createdAt DESC, so the first entry seen is the latest — keep it.
+      if (!map.has(otherId)) map.set(otherId, interest.status);
+    }
+    return map;
   }
 
   async generateRandomMatches(userId: string, count = 4) {
@@ -179,7 +213,14 @@ export class MatchesService {
       relations: ['matchedUser', 'matchedUser.profile', 'matchedUser.profile.photos'],
       order: { suggestedAt: 'DESC' },
     });
-    return this.formatMatches(matches);
+
+    // Attach the interest status (pending/accepted/declined) between the current
+    // user and each matched user, looked up in either direction.
+    const interestStatusMap = await this.buildInterestStatusMap(
+      userId,
+      matches.map(m => m.matchedUserId),
+    );    
+    return this.formatMatches(matches, interestStatusMap);
   }
 
   async getMatchesByUsers(userId: string, matchedUserId: string) {
@@ -686,11 +727,11 @@ Return ONLY this JSON structure (fill every field — do not omit any key):
 
 
 
-  private formatMatches(matches: Match[]) {
-    return matches.map((m) => this.formatMatch(m));
+  private formatMatches(matches: Match[], interestStatusMap?: Map<string, string>) {
+    return matches.map((m) => this.formatMatch(m, interestStatusMap?.get(m.matchedUserId)));
   }
 
-  private formatMatch(match: Match) {
+  private formatMatch(match: Match, interestStatus?: string) {
     const profile = match.matchedUser?.profile;
     return {
       user: match.matchedUser,
@@ -700,10 +741,11 @@ Return ONLY this JSON structure (fill every field — do not omit any key):
       explanationText: match.explanationText,
       badges: match.badges,
       status: match.status,
+      interestStatus: interestStatus ?? null,
       currentStep: match.currentStep,
       suggestedAt: match.suggestedAt,
       matchedUserId: match.matchedUserId,
-      userId: match.matchedUserId,
+      userId: match.userId,
       profile: profile ? {
         userId: profile.id,
         firstName: profile.firstName,

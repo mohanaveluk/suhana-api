@@ -6,3 +6,10 @@ export enum ProfileStatus {
   PAUSED = 'PAUSED',
   DEACTIVATED = 'DEACTIVATED',
 }
+
+export enum Membership {
+  FREE = 'free', 
+  SILVER = 'silver', 
+  GOLD = 'gold', 
+  PLATINUM = 'platinum'
+}
