@@ -32,7 +32,9 @@ import { UpdateUserDto } from '../user/dto/update-user.dto';
 import { CustomLoggerService } from '../logger/custom-logger.service';
 import { CloudStorageService } from 'src/common/services/cloud-storage.service';
 import { PasswordResetToken } from './entity/password-reset-token.entity';
-import { buildOtpEmailHtml } from 'src/shared/email/templates/otc-email-templates';
+import { LoginOtc } from './entity/login-otc.entity';
+import { buildOtpEmailHtml, loginOtpEmailTemplate } from 'src/shared/email/templates/otc-email-templates';
+import { ValidateLoginOtcDto } from './dto/login-otc.dto';
 import { Profile } from '../user/entity';
 import { customAlphabet, nanoid } from 'nanoid';
 import { EmailType } from '../email-history/entity/email-history.entity';
@@ -53,7 +55,9 @@ export class AuthService {
     @InjectRepository(OTC)
     private otcRepository: Repository<OTC>, 
     @InjectRepository(PasswordResetToken)
-    private readonly tokenRepo: Repository<PasswordResetToken>,    
+    private readonly tokenRepo: Repository<PasswordResetToken>,
+    @InjectRepository(LoginOtc)
+    private readonly loginOtcRepo: Repository<LoginOtc>,
 
     private jwtService: JwtService,
     private dateService: DateService,
@@ -326,19 +330,117 @@ export class AuthService {
       lastName: user.last_name,
     };
     
-    return {
-      status: true,
-      access_token: await this.jwtService.signAsync(payload),
-      user: {
-        id: user.uguid,
-        email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
-      }      
-   };*/
+      return {
+        status: true,
+        access_token: await this.jwtService.signAsync(payload),
+        user: {
+          id: user.uguid,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+        }      
+    };*/
     this.logger.debug(`user: '${user.email}' Logged in successfully, generating tokens...`);
     return this.tokenService.generateTokens(user, user.role ? user.role.name : '');
 
+  }
+
+  // ── Passwordless login STEP 1: email a one-time sign-in code ───────────────
+  // Always resolves with the same generic message regardless of whether the
+  // email exists / is eligible (prevents account-enumeration).
+  async sendLoginOtc(email: string, domain: string): Promise<{ message: string }> {
+    const genericMessage = 'If this email is registered, a one-time login code has been sent.';
+
+    const user = await this.userRepository.findOne({
+      where: { email, is_deleted: false },
+    });
+
+    // Only issue a code to a real, active, verified account — but never reveal
+    // which of these conditions failed.
+    if (!user || user.is_active === 0 || !user.is_email_verified) {
+      return { message: genericMessage };
+    }
+
+    // Invalidate any previously-issued, still-unused codes for this email
+    await this.loginOtcRepo.delete({ email, used: false });
+
+    const code = this.generateOTC();
+    const codeHash = await bcrypt.hash(code, 10);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    await this.loginOtcRepo.save(
+      this.loginOtcRepo.create({ email, codeHash, expiresAt, used: false }),
+    );
+
+    await this.emailService.sendEmail({
+      to: user.email,
+      subject: 'Suhana - Your one-time login code',
+      html: loginOtpEmailTemplate({
+        otp: code,
+        firstName: user.first_name,
+        email: user.email,
+        expiresInMinutes: 15,
+        domain,
+      }),
+      history: {
+        emailType: EmailType.LOGIN_OTC,
+        fromUserId: user.id,
+        toUserId: user.id,
+        createdBy: user.id,
+      },
+    });
+
+    this.logger.debug(`Login OTC issued for user: '${user.email}'`);
+    return { message: genericMessage };
+  }
+
+  // ── Passwordless login STEP 2: validate the code and issue JWT tokens ──────
+  async validateLoginOtc(dto: ValidateLoginOtcDto, req: Request) {
+    const record = await this.loginOtcRepo.findOne({
+      where: { email: dto.email, used: false },
+      order: { createdAt: 'DESC' }, // most recent code wins
+    });
+
+    if (!record) {
+      throw new BadRequestException('Invalid or expired login code.');
+    }
+
+    if (record.expiresAt < new Date()) {
+      throw new GoneException('Login code has expired. Please request a new one.');
+    }
+
+    const isMatch = await bcrypt.compare(dto.code, record.codeHash);
+    if (!isMatch) {
+      throw new BadRequestException('Incorrect login code. Please try again.');
+    }
+
+    // Load the account (with role for the token payload) and re-check eligibility
+    const user = await this.userRepository.findOne({
+      where: { email: dto.email, is_deleted: false },
+      relations: ['role'],
+    });
+    if (!user || user.is_active === 0 || !user.is_email_verified) {
+      throw new UnauthorizedException('Oops, User is disabled or email is not verified.');
+    }
+
+    // Consume the code so it cannot be replayed
+    record.used = true;
+    await this.loginOtcRepo.save(record);
+
+    // Record login — mirrors the password login flow
+    const loginTime = new Date();
+    await this.userLoginHistoryService.recordLogin(
+      user.id,
+      user.id,
+      loginTime,
+      req.ip,
+      req.headers['user-agent'],
+    );
+    user.last_login = loginTime;
+    await this.userRepository.save(user);
+
+    this.logger.debug(`user: '${user.email}' logged in via OTC, generating tokens...`);
+    return this.tokenService.generateTokens(user, user.role ? user.role.name : '');
   }
 
   async updatePassword_legacy(userGuId: string, updatePasswordDto: UpdatePasswordLegacyDto) {

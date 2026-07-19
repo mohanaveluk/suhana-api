@@ -32,6 +32,7 @@ import { VerifyEmailDto } from '../user/dto/verify-email.dto';
 import { UserResponseDto } from '../user/dto/user-response.dto';
 import { ResponseDto } from 'src/common/dto/response.dto';
 import { LoginDto } from './dto/login.dto';
+import { SendLoginOtcDto, ValidateLoginOtcDto } from './dto/login-otc.dto';
 import { ValidateOTCDto } from '../user/dto/validate-otc.dto';
 import { MobileLoginDto } from './dto/mobile-login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -167,7 +168,36 @@ export class AuthController {
       //   new ResponseDto(false, error.message, null, error.message),
       //   HttpStatus.UNAUTHORIZED,
       // );
-    }    
+    }
+  }
+
+
+  @Public()
+  @Post('login/send-otc')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request a one-time code to log in with email (passwordless)' })
+  @ApiResponse({ status: 200, description: 'If the email is registered, a one-time login code is sent' })
+  @ApiResponse({ status: 400, description: Constants.SWAGGER.BAD_REQUEST, type: ApiErrorDto })
+  async sendLoginOtc(@Body() dto: SendLoginOtcDto, @Req() req: ExpRequest) : Promise<ResponseDto<any>> {
+    const domain = `${req.get('origin')}`;
+    const result = await this.authService.sendLoginOtc(dto.email, domain);
+    return new ResponseDto(true, result.message, null, null);
+  }
+
+  @Public()
+  @Post('login/validate-otc')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Validate the one-time login code and return JWT tokens' })
+  @ApiResponse({ status: 200, description: 'Code validated, returns JWT token' })
+  @ApiResponse({ status: 400, description: 'Invalid login code', type: ApiErrorDto })
+  @ApiResponse({ status: 410, description: 'Login code has expired', type: ApiErrorDto })
+  async validateLoginOtc(@Body() dto: ValidateLoginOtcDto, @Req() req: ExpRequest) : Promise<ResponseDto<any>> {
+    try {
+      const result = await this.authService.validateLoginOtc(dto, req);
+      return new ResponseDto(true, 'Login successful', result, null);
+    } catch (error) {
+      throw error;
+    }
   }
 
 
