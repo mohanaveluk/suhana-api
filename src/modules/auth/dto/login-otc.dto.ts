@@ -23,6 +23,6 @@ export class ValidateLoginOtcDto {
   @ApiProperty({ example: '123456' })
   @IsString()
   @Length(6, 6, { message: 'Login code must be exactly 6 digits' })
-  @Matches(/^\d{6}$/, { message: 'Login code must contain only digits' })
+  @Matches(/^\d{6}$/, { message: 'Login code must contain only 6 digits' })
   code: string;
 }
