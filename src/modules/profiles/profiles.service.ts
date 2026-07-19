@@ -11,6 +11,7 @@ import { CustomLoggerService } from '../logger/custom-logger.service';
 import { EmailService } from 'src/shared/email/email.service';
 import { shareProfileEmailTemplate, verifyEmailTemplate } from 'src/shared/email/templates/verify-email-template';
 import { ShareProfileDto } from './dto/share-profile.dto';
+import { EmailType } from '../email-history/entity/email-history.entity';
 
 
 @Injectable()
@@ -168,6 +169,7 @@ export class ProfilesService {
 
   async updateNew(domain: string, dto: UpdateProfileDto) {
     console.log(JSON.stringify(dto));
+    this.logger.debug(`Updating new user information ${dto.userId}`);
     const user = await this.userRepo.findOne({
       where: {id: dto.userId, is_email_verified: false, temp_guid: dto.tempGuid}
     });
@@ -224,6 +226,7 @@ export class ProfilesService {
         manglikStatus: dto.horoscope?.manglikStatus || user.profile.horoscope?.manglikStatus,
         documentUrl: dto.horoscope?.documentUrl || user.profile.horoscope?.documentUrl,
       };
+      user.updated_at = user.verification_code_expiry = new Date();
       user.profile.horoscopeDocUrl = dto.horoscope?.documentUrl || user.profile.horoscopeDocUrl;
       // user.profile.photos.forEach((photo) => {
       //   const updatedPhoto = dto.photos?.find((p) => p.id === photo.id);
@@ -234,21 +237,6 @@ export class ProfilesService {
       user.profile.profileCompleteness = this.calculateCompleteness(user.profile);
       const userSaved = await this.userRepo.save(user);
       const saved = await this.profileRepo.save(user.profile);
-
-
-      // if (!userSaved.is_email_verified) {
-      //   //Send verification email
-      //   this.logger.debug('Sending email...');
-      //   const userFirstName = userSaved.first_name ? (userSaved.first_name === "" || userSaved.first_name === 'unknown' ? "User": userSaved.first_name) : "User";
-
-      //   await this.emailService.sendEmail({
-      //     to: user.email,
-      //     cc: 'gcpstudy0@gmail.com',
-      //     subject: 'Verify Your Email Address',
-      //     html: verifyEmailTemplate(user.verification_code, user.id, userFirstName, domain),
-      //   });
-      //   this.logger.debug('Email has been sent');
-      // }
 
       // Auto-capture unique city and occupation values for dropdown lookups
       await Promise.all([
@@ -272,6 +260,28 @@ export class ProfilesService {
       // if (dto.photos && dto.photos.length > 0) {
       //   await this.addPhoto(userId, dto.photos?.[0]?.url, dto.photos?.[0]?.variants, dto.photos?.[0]?.isPrimary);
       // }
+
+      if (!userSaved.is_email_verified) {
+        this.logger.debug(`Yet to verify email id: ${userSaved.email}`);
+        //Send verification email
+        this.logger.debug('Sending email...');
+        const userFirstName = userSaved.first_name ? (userSaved.first_name === "" || userSaved.first_name === 'unknown' ? "User" : userSaved.first_name) : "User";
+
+        await this.emailService.sendEmail({
+          to: user.email,
+          cc: 'gcpstudy0@gmail.com',
+          subject: 'Suhana - Verify Your Email Address',
+          html: verifyEmailTemplate(user.verification_code, user.id, userFirstName, domain),
+          history: {
+            emailType: EmailType.EMAIL_VERIFICATION,
+            fromUserId: user.id,
+            toUserId: user.id,
+            createdBy: user.id
+          }
+        });
+        this.logger.debug('Email has been sent');
+      }
+
       return this.toProfileResponse(saved);
       
     } catch (err) {

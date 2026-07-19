@@ -146,7 +146,7 @@ export class AuthService {
       const token = await this.tokenService.generateTokens(savedUser, userRole);
 
       // Send verification email
-      this.logger.debug('Sending email...');
+      /*this.logger.debug('Sending email...');
       const userFirstName = savedUser.first_name ? (savedUser.first_name === "" || savedUser.first_name === 'unknown' ? "User": savedUser.first_name) : "User";
       await this.emailService.sendEmail({
         to: user.email,
@@ -159,7 +159,7 @@ export class AuthService {
           createdBy: user.id          
         }
       });
-      this.logger.debug('Email has been sent');
+      this.logger.debug('Email has been sent');*/
 
       //const detail = {user: savedUser, accessToken: token };
       return { detail: token, user: savedUser, message: 'User registered successfully. Please check your email for verification code.' };
