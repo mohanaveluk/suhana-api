@@ -14,6 +14,7 @@ export enum EmailType {
   PASSWORD_RESET          = 'PASSWORD_RESET',
   SYSTEM_NOTIFICATION     = 'SYSTEM_NOTIFICATION',
   EMAIL_VERIFICATION      = 'EMAIL_VERIFICATION',
+  LOGIN_OTC               = 'LOGIN_OTC',
 }
 
 export enum EmailStatus {

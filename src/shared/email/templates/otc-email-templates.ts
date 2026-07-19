@@ -25,6 +25,7 @@ const C = {
   gradient:        'linear-gradient(135deg, #b76e79 0%, #a20000 100%)',        // --suhana-gradient
   gradientLight1:  'linear-gradient(135deg, #f0d4d8 0%, #fde8e8 100%)',        // --suhana-gradient-light1
   gradientLight:   'linear-gradient(135deg, #fff0f2 0%, #f2e5e5 100%)',        // --suhana-gradient-light
+  fontname:           "'Segoe UI',Arial,sans-serif",  // --suhana-font
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -593,3 +594,320 @@ export const buildOtpEmailHtml = (otp: string, firstName: string): string => {
   </body>
   </html>`.trim();
 }
+
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Template 9 — loginOtpEmailTemplate
+//
+//  Sent when a member enters their email address on the Suhana Matrimony
+//  login page and requests a one-time code to sign in (passwordless login).
+//
+//  Design fully synced with the existing templates:
+//  ✓ Same outer shell (max-width 600px, border-radius 20px, shadow)
+//  ✓ Same header (4px gold top strip · frosted icon box · badge)
+//  ✓ Same individual OTP digit cells (same size, same C.* colours)
+//  ✓ Same two info pills (Expires in | Single use)
+//  ✓ Same gold amber security note bar
+//  ✓ Same maroon left-bar privacy note
+//  ✓ Same blush footer with support link and copyright
+//  ✓ Same C.* colour tokens — no raw hex values
+// ─────────────────────────────────────────────────────────────────────────────
+export const loginOtpEmailTemplate = (params: {
+  otp:               string;   // 6-digit code, e.g. "847391"
+  firstName?:        string;   // optional — used in greeting if available
+  email:             string;   // member's email address (shown back for clarity)
+  expiresInMinutes?: number;   // default 10 (login codes are slightly longer-lived)
+  domain:            string;   // for footer support link
+}): string => {
+
+  const {
+    otp,
+    email,
+    domain,
+    expiresInMinutes = 10,
+  } = params;
+
+  const year        = new Date().getFullYear();
+  //const lockIconSrc = getLockIconBase64();
+  const lockIconSrc  = "https://storage.googleapis.com/inv-images/home/fav-flrnd.png"; //getHeartIconBase64();
+
+  const greeting    = (params.firstName ?? '').trim()
+    ? `Hi <strong style="color:${C.textPrimary};">${params.firstName}</strong>,`
+    : `Hi there,`;
+
+  const otpPlainCell = `<td style="width:52px;height:64px;
+                   background:${C.roseGoldLighter};border:1px solid ${C.roseGoldLight};
+                   border-radius:12px;text-align:center;vertical-align:middle;
+                   font-size:30px;font-weight:800;color:${C.maroon};
+                   font-family:'Courier New',Courier,monospace;padding: 1px 18px 0px 18px;">${otp}</td>`;
+  // ── Individual OTP digit cells ─────────────────────────────────────────────
+  // Identical technique to profileActionOtpEmailTemplate — one <td> per digit
+  // with explicit dimensions so they render consistently across all email clients.
+  const otpCells = otp
+    .split('')
+    .map(
+      (d) => `
+        <td style="width:52px;height:64px;
+                   background:${C.roseGoldLighter};border:2px solid ${C.roseGoldLight};
+                   border-radius:12px;text-align:center;vertical-align:middle;
+                   font-size:30px;font-weight:800;color:${C.maroon};
+                   font-family:'Courier New',Courier,monospace;padding:0;">
+          ${d}
+        </td>`,
+    )
+    .join(`<td style="width:8px;"></td>`);  // 8px gap between each digit cell
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Your sign-in code – Suhana Matrimony</title>
+</head>
+<body style="margin:0;padding:0;background-color:${C.blush};
+             font-family:${C.fontname}">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background-color:${C.blush};padding:40px 16px;">
+    <tr>
+      <td align="center">
+
+        <table width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="max-width:600px;background:#ffffff;border-radius:20px;
+                      box-shadow:0 8px 32px ${C.shadow};overflow:hidden;">
+
+          <!-- ══════════════════════════════════════════
+               HEADER
+               4px gold top strip + lock icon in frosted
+               box + title + subtitle + badge
+               ══════════════════════════════════════════ -->
+          <tr>
+            <td style="background:${C.maroon};background:${C.gradient};padding:0;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+
+                <!-- 4px gold decorative top border -->
+                <tr>
+                  <td style="height:4px;
+                             background:linear-gradient(90deg,
+                               ${C.gold} 0%,${C.goldLight} 50%,${C.gold} 100%);">
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding:36px 40px 28px;text-align:center;">
+
+                    <!-- Lock icon in frosted rounded box -->
+                    <div style="display:inline-block;background:rgba(255,255,255,0.18);
+                                border-radius:16px;padding:14px;margin-bottom:18px;">
+                      <img src="${lockIconSrc}" alt="Secure sign-in"
+                           width="40" height="40" style="display:block;border:0;" />
+                    </div>
+
+                    <h1 style="margin:0 0 8px;font-family:${C.fontname};
+                               font-size:24px;font-weight:700;color:#ffffff;
+                               letter-spacing:-0.3px;">
+                      Your Sign-In Code
+                    </h1>
+                    <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.82);
+                              line-height:1.5;">
+                      Use this code to complete your login to Suhana Matrimony
+                    </p>
+
+                    <!-- Gold "Secure Login" badge — same style across all templates -->
+                    <div style="display:inline-block;background:rgba(201,168,76,0.22);
+                                border:1px solid rgba(201,168,76,0.45);border-radius:50px;
+                                padding:6px 18px;margin-top:16px;">
+                      <span style="font-size:13px;font-weight:600;color:${C.goldLight};
+                                   letter-spacing:0.3px;font-family:Arial,Helvetica,sans-serif;">
+                        &#128274;&nbsp; Secure One-Time Login Code
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ══════════════════════════════════════════
+               BODY
+               ══════════════════════════════════════════ -->
+          <tr>
+            <td style="padding:40px 40px 32px;">
+
+              <!-- Greeting -->
+              <p style="margin:0 0 8px;font-size:15px;color:${C.textPrimary};
+                        line-height:1.7;font-family:Arial,Helvetica,sans-serif;">
+                ${greeting}
+              </p>
+              <div style="width:40px;height:3px;background:${C.gradient};
+                          border-radius:2px;margin:0 0 20px;"></div>
+
+              <p style="margin:0 0 28px;font-family:Arial,Helvetica,sans-serif;
+                        font-size:15px;color:${C.textPrimary};line-height:1.8;">
+                We received a sign-in request for your
+                <strong style="color:${C.maroon};">Suhana Matrimony</strong>
+                account associated with
+                <strong>${email}</strong>.
+                Enter the 6-digit code below to complete your login.
+              </p>
+
+              <!-- ── OTP digit block ────────────────────────────────────────── -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="background:${C.roseGoldLighter};border:1px solid ${C.roseGoldLight};
+                             border-radius:16px;padding:28px 20px;text-align:center;">
+
+                    <p style="margin:0 0 18px;font-family:Arial,Helvetica,sans-serif;
+                              font-size:11px;font-weight:700;color:${C.maroon};
+                              text-transform:uppercase;letter-spacing:1.8px;">
+                      Sign-In Code
+                    </p>
+
+                    <!-- One <td> per digit — same technique as profileActionOtpEmailTemplate -->
+                    <table cellpadding="0" cellspacing="0" border="0"
+                           style="margin:0 auto 18px;">
+                      <tr>${otpPlainCell}</tr>
+                    </table>
+
+                    <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
+                              font-size:12px;color:${C.textSecondary};line-height:1.5;">
+                      Enter this code on the Suhana Matrimony sign-in page
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- ── Info pills (same layout as other OTP templates) ─────────── -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="margin-top:20px;">
+                <tr>
+                  <!-- Expires in — gold pill -->
+                  <td width="50%" style="padding-right:8px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+                      <td style="background:${C.goldLight};border-radius:10px;
+                                 padding:14px 16px;text-align:center;">
+                        <p style="margin:0 0 3px;font-family:Arial,Helvetica,sans-serif;
+                                   font-size:10px;font-weight:700;color:${C.maroonDark};
+                                   text-transform:uppercase;letter-spacing:0.7px;">
+                          Expires in
+                        </p>
+                        <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
+                                   font-size:14px;color:${C.textPrimary};font-weight:600;">
+                          ${expiresInMinutes} minutes
+                        </p>
+                      </td>
+                    </tr></table>
+                  </td>
+                  <!-- Single use — rose pill -->
+                  <td width="50%" style="padding-left:8px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+                      <td style="background:${C.roseGoldLighter};border-radius:10px;
+                                 padding:14px 16px;text-align:center;">
+                        <p style="margin:0 0 3px;font-family:Arial,Helvetica,sans-serif;
+                                   font-size:10px;font-weight:700;color:${C.maroon};
+                                   text-transform:uppercase;letter-spacing:0.7px;">
+                          Single use
+                        </p>
+                        <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
+                                   font-size:14px;color:${C.textPrimary};font-weight:600;">
+                          One-time code
+                        </p>
+                      </td>
+                    </tr></table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- ── Security note — amber left bar ────────────────────────── -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="margin-top:20px;">
+                <tr>
+                  <td style="background:${C.goldLight};border-left:4px solid ${C.gold};
+                             border-radius:6px;padding:14px 18px;">
+                    <p style="margin:0 0 5px;font-family:Arial,Helvetica,sans-serif;
+                              font-size:13px;font-weight:700;color:${C.maroonDark};
+                              line-height:1.4;">
+                      Didn't request this code?
+                    </p>
+                    <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
+                              font-size:13px;color:${C.textSecondary};line-height:1.6;">
+                      If you did not attempt to sign in, please ignore this email —
+                      your account is safe and no access will be granted without entering the code.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- ── Privacy note — maroon left bar ───────────────────────── -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="margin-top:16px;">
+                <tr>
+                  <td style="background:${C.ivoryWarm};border-left:4px solid ${C.roseGold};
+                             border-radius:6px;padding:14px 18px;">
+                    <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
+                              font-size:13px;color:${C.textSecondary};line-height:1.6;">
+                      <strong style="color:${C.maroon};">Never share this code.</strong>
+                      The Suhana Matrimony team will <em>never</em> ask for your sign-in
+                      code by phone, email, or chat. Keep it confidential.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- ══════════════════════════════════════════
+               SIGN-OFF
+               ══════════════════════════════════════════ -->
+          <tr>
+            <td style="background:${C.blush};border-top:1px solid ${C.roseGoldLighter};
+                       padding:22px 40px;">
+              <p style="margin:0 0 3px;font-family:${C.fontname};
+                        font-size:15px;color:${C.textPrimary};">Warm regards,</p>
+              <p style="margin:0 0 2px;font-family:${C.fontname}
+                        font-size:16px;font-weight:700;color:${C.maroon};">
+                The Suhana Matrimony Team
+              </p>
+              <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
+                        font-size:12px;color:${C.roseGold};">
+                Connecting hearts, building futures.
+              </p>
+            </td>
+          </tr>
+
+          <!-- ══════════════════════════════════════════
+               FOOTER
+               ══════════════════════════════════════════ -->
+          <tr>
+            <td style="background:${C.roseGoldLighter};border-top:1px solid ${C.roseGoldLight};
+                       padding:18px 40px;text-align:center;">
+              <p style="margin:0 0 5px;font-family:Arial,Helvetica,sans-serif;
+                        font-size:13px;color:${C.textSecondary};line-height:1.6;">
+                This email was sent by
+                <strong style="color:${C.maroon};">Suhana Matrimony</strong>
+                because a sign-in was requested for
+                <strong>${email}</strong>.
+                Questions? Contact our
+                <a href="mailto:support@${domain}"
+                   style="color:${C.maroon};text-decoration:none;font-weight:600;">
+                  support team</a>.
+              </p>
+              <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
+                        font-size:11px;color:${C.roseGoldLight};">
+                © ${year} Suhana Matrimony. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`.trim();
+};

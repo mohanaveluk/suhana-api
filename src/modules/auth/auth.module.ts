@@ -25,13 +25,14 @@ import { LogModule } from '../logger/log.module';
 import { CustomLoggerService } from '../logger/custom-logger.service';
 import { CloudStorageService } from 'src/common/services/cloud-storage.service';
 import { PasswordResetToken } from './entity/password-reset-token.entity';
+import { LoginOtc } from './entity/login-otc.entity';
 import { Profile } from '../user/entity';
 
 dotenv.config();
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, RefreshToken, PasswordArchive, RoleEntity, OTC, PasswordResetToken, UserLoginHistory, Profile]),
+    TypeOrmModule.forFeature([User, RefreshToken, PasswordArchive, RoleEntity, OTC, PasswordResetToken, LoginOtc, UserLoginHistory, Profile]),
     PassportModule.register({ defaultStrategy: 'jwt' ,
       session: false}),
     
