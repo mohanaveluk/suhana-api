@@ -747,6 +747,10 @@ export class AuthService {
         throw new BadRequestException('User not found');
       }
 
+      if(user.is_email_verified){
+        return { message: 'Email already verified' };
+      }
+
       const verificationCode = this.generateOTC();
       const verificationCodeExpiry = new Date(Date.now() + 30 * 60 * 1000);
       user.verification_code = verificationCode;
