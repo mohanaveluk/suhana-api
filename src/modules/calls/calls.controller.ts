@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { CallsService } from './calls.service';
@@ -12,7 +12,7 @@ export class CallsController {
   constructor(private readonly callsService: CallsService) {}
 
   @Post('initiate')
-  @ApiOperation({ summary: 'Initiate a call (audio or video)' })
+  @ApiOperation({ summary: 'Create a call record (audio or video). Real-time ringing is driven by the /calls Socket.IO gateway.' })
   @ApiResponse({ status: 201, description: 'Call initiated' })
   initiate(@Request() req: any, @Body() dto: InitiateCallDto) {
     return this.callsService.initiate(req.user.id, dto.conversationId, dto.type);
@@ -26,10 +26,33 @@ export class CallsController {
     return this.callsService.getHistory(req.user.id, conversationId);
   }
 
-  @Patch(':id/end')
-  @ApiOperation({ summary: 'End a call' })
+  @Get('missed')
+  @ApiOperation({ summary: 'Get missed calls for the current user' })
+  @ApiResponse({ status: 200, description: 'Missed calls' })
+  getMissed(@Request() req: any) {
+    return this.callsService.getMissed(req.user.id);
+  }
+
+  @Post(':id/accept')
+  @ApiOperation({ summary: 'Accept a ringing call' })
+  @ApiResponse({ status: 200, description: 'Call accepted' })
+  @ApiResponse({ status: 403, description: 'Only the receiver can accept the call' })
+  accept(@Param('id') id: string, @Request() req: any) {
+    return this.callsService.accept(id, req.user.id);
+  }
+
+  @Post(':id/decline')
+  @ApiOperation({ summary: 'Decline a ringing call' })
+  @ApiResponse({ status: 200, description: 'Call declined' })
+  @ApiResponse({ status: 403, description: 'Only the receiver can decline the call' })
+  decline(@Param('id') id: string, @Request() req: any) {
+    return this.callsService.decline(id, req.user.id);
+  }
+
+  @Post(':id/end')
+  @ApiOperation({ summary: 'End a call (either participant may end it)' })
   @ApiResponse({ status: 200, description: 'Call ended' })
-  @ApiResponse({ status: 403, description: 'Only the initiator can end the call' })
+  @ApiResponse({ status: 403, description: 'Only a call participant can end the call' })
   end(@Param('id') id: string, @Request() req: any) {
     return this.callsService.end(id, req.user.id);
   }

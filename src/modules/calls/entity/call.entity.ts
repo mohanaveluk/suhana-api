@@ -23,13 +23,20 @@ export class Call {
   @JoinColumn({ name: 'initiatedBy' })
   initiator: User;
 
+  @Column({ nullable: true })
+  receiverId: string;
+
+  @ManyToOne(() => User, { eager: false })
+  @JoinColumn({ name: 'receiverId' })
+  receiver: User;
+
   @Column({ type: 'enum', enum: ['audio', 'video'] })
   type: string;
 
   @Column({
     type: 'enum',
-    enum: ['initiated', 'ongoing', 'ended', 'missed'],
-    default: 'initiated',
+    enum: ['PENDING', 'RINGING', 'ACCEPTED', 'DECLINED', 'MISSED', 'COMPLETED', 'FAILED'],
+    default: 'PENDING',
   })
   status: string;
 
@@ -37,8 +44,17 @@ export class Call {
   startedAt: Date;
 
   @Column({ type: 'datetime', nullable: true })
+  answeredAt: Date;
+
+  @Column({ type: 'datetime', nullable: true })
   endedAt: Date;
 
   @Column({ nullable: true })
-  duration: number;
+  durationSeconds: number;
+
+  @Column({ nullable: true })
+  callerSocketId: string;
+
+  @Column({ nullable: true })
+  receiverSocketId: string;
 }
