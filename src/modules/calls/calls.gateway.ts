@@ -63,7 +63,11 @@ export class CallsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleDisconnect(client: Socket): void {
     const userId = this.presence.userDisconnected(client.id);
     if (!userId || !this.presence.isLastSocket(userId)) return;
-    void this.cleanupActiveCallForUser(userId);
+    // Never let a transient DB/network error here take down the whole process —
+    // this runs unattended on every disconnect, so it must not throw uncaught.
+    this.cleanupActiveCallForUser(userId).catch(err =>
+      console.error(`[CallsGateway] cleanupActiveCallForUser failed for ${userId}:`, err),
+    );
   }
 
   // Returns { callId } (or { error }) as the socket.io ack, so the caller learns the callId
@@ -94,7 +98,11 @@ export class CallsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
         this.ringTimeouts.set(
           call.id,
-          setTimeout(() => void this.expireRing(call.id), RING_TIMEOUT_MS),
+          setTimeout(() => {
+            this.expireRing(call.id).catch(err =>
+              console.error(`[CallsGateway] expireRing failed for call ${call.id}:`, err),
+            );
+          }, RING_TIMEOUT_MS),
         );
       } else {
         await this.callsService.markMissed(call.id);
