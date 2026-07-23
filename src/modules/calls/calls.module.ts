@@ -12,8 +12,8 @@ import { UserPresenceService } from './presence/user-presence.service';
 @Module({
   imports: [TypeOrmModule.forFeature([Call, Conversation, UserBlock, User])],
   controllers: [CallsController],
-  providers: [CallsService, UserPresenceService],
-  //providers: [CallsService, CallsGateway, UserPresenceService],
+  //providers: [CallsService, UserPresenceService],
+  providers: [CallsService, CallsGateway, UserPresenceService],
   exports: [CallsService],
 })
 export class CallsModule {}
