@@ -3,8 +3,6 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import * as http from 'http';
-import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { AuditInterceptor } from './modules/audit/audit.interceptor';
 import { AuditRepository } from './modules/audit/audit.repository';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -15,6 +13,19 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path/win32';
 require('dotenv').config();
 
+// Last-resort crash logging. Deliberately uses console.error (synchronous, stderr) rather
+// than the winston/DB-backed CustomLoggerService — if the process is crashing, we can't
+// assume the DB connection or async transports are still healthy enough to log through.
+// stderr is always captured by Cloud Run's Cloud Logging regardless of app state.
+process.on('uncaughtException', (error) => {
+  console.error(`[FATAL] Uncaught exception at ${new Date().toISOString()}:`, error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error(`[FATAL] Unhandled rejection at ${new Date().toISOString()}:`, reason);
+  process.exit(1);
+});
 
 async function bootstrap() {
       // Wait for database to be available
@@ -26,16 +37,16 @@ async function bootstrap() {
   app.useStaticAssets(join(__dirname, '..', 'src', 'assets'), {
     prefix: '/static',
   });
-    
+
   const server = app.getHttpServer() as http.Server;
   // Set global prefix for all routes
   app.setGlobalPrefix('api/v1');
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
-  app.useGlobalFilters(new AllExceptionsFilter());
-  app.useGlobalInterceptors(new LoggingInterceptor());
+  // AllExceptionsFilter and LoggingInterceptor are registered as APP_FILTER/APP_INTERCEPTOR
+  // providers in AppModule (not here) so Nest's DI can inject CustomLoggerService into them.
   //app.useGlobalInterceptors(new AuditInterceptor(app.get(AuditRepository), app.get('ClinicContext')));
-  
+
 
   // Configure CORS
   app.enableCors({

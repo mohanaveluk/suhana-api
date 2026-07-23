@@ -66,6 +66,11 @@ const logFormat = winston.format.printf(({ timestamp, level, message, context })
       this.logger.info(message, { context });
       this.logToDatabase('info', message, context);
     }
+
+    /** Same as log(), but skips the DB write — for high-frequency routine calls (polling, heartbeats) that aren't worth an audit row. */
+    logWithoutDb(message: string, context?: string) {
+      this.logger.info(message, { context });
+    }
   
     error(message: string, context?: any) {
       this.logger.error(message, { context });
