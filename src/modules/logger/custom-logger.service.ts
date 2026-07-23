@@ -61,34 +61,45 @@ const logFormat = winston.format.printf(({ timestamp, level, message, context })
       log.context = context;
       await this.logRepository.save(log);
     }
-  
+
+    // logToDatabase() is fire-and-forget from every method below (logging must never block
+    // or fail the request it's attached to) — but an unawaited rejection is an unhandled
+    // promise rejection, which crashes the whole Node process. Route every call through this
+    // so a transient DB error (connection pool exhaustion, a dropped connection, etc.) only
+    // ever produces a console line, never takes down the server.
+    private writeToDb(level: string, message: string, context?: string): void {
+      this.logToDatabase(level, message, context).catch(err => {
+        this.logger.error(`Failed to write log to DB: ${err?.message ?? err}`, { context: 'CustomLoggerService' });
+      });
+    }
+
     log(message: string, context?: string) {
       this.logger.info(message, { context });
-      this.logToDatabase('info', message, context);
+      this.writeToDb('info', message, context);
     }
 
     /** Same as log(), but skips the DB write — for high-frequency routine calls (polling, heartbeats) that aren't worth an audit row. */
     logWithoutDb(message: string, context?: string) {
       this.logger.info(message, { context });
     }
-  
+
     error(message: string, context?: any) {
       this.logger.error(message, { context });
-      this.logToDatabase('error', message, context);
+      this.writeToDb('error', message, context);
     }
-  
+
     warn(message: string, context?: string) {
       this.logger.warn(message, { context });
-      this.logToDatabase('warn', message, context);
+      this.writeToDb('warn', message, context);
     }
-  
+
     debug(message: string, context?: string) {
       this.logger.debug(message, { context });
-      this.logToDatabase('debug', message, context);
+      this.writeToDb('debug', message, context);
     }
-  
+
     verbose(message: string, context?: string) {
       this.logger.verbose(message, { context });
-      this.logToDatabase('verbose', message, context);
+      this.writeToDb('verbose', message, context);
     }
   }
