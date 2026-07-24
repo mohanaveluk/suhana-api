@@ -7,10 +7,11 @@ import {
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { Request, Response } from 'express';
+import { CustomLoggerService } from '../../modules/logger/custom-logger.service';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  constructor() {}
+    constructor(private readonly logger: CustomLoggerService) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
@@ -35,6 +36,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
         httpStatus,
         message: JSON.stringify(message),
       };
+    const user = (request as any).user?.email ?? (request as any).user?.id ?? 'anonymous';
+    const stack = exception instanceof Error ? exception.stack : undefined;      
 
     // const responseBody = {
     //   statusCode: httpStatus,
@@ -49,16 +52,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
     //this.logger.error(`HTTP Status: ${status} Error Message: ${JSON.stringify(message)}`, JSON.stringify(logMessage));
     //httpAdapter.reply(ctx.getResponse(), responseBody, httpStatus);
 
+    this.logger.error(
+      `[${request.method}] ${request.url} - ${httpStatus} - user=${user} - ${JSON.stringify(message)}`,
+      stack ?? 'ExceptionFilter',
+    );
+
     response.status(httpStatus).json({
       statusCode: httpStatus,
       message: typeof message === 'object' && message !== null && 'message' in message
-        ? (Array.isArray(message?.message)
-          ? message?.message[0]
-          : message?.message)
+        ? (Array.isArray((message as any).message)
+          ? (message as any).message[0]
+          : (message as any).message)
         : message || 'Something went wrong',
       timestamp: new Date().toISOString(),
       path: request.url,
     });
-
   }
 }
