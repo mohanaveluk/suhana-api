@@ -1,7 +1,12 @@
 import { Module } from '@nestjs/common';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { LogModule } from './modules/logger/log.module';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+
 import { adminConfig, getDatabaseConfig, googleCloudConfig, jwtConfig, smtpConfig } from './config/configuration';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { typeOrmConfig } from './config/typeorm.config';
@@ -48,6 +53,7 @@ const envFilePath = process.env.NODE_ENV === 'production'
       useFactory: typeOrmConfig,
     }),
     CommonModule,
+    LogModule,
     AuthModule,
     HealthModule,
     AuditModule,
@@ -75,7 +81,11 @@ const envFilePath = process.env.NODE_ENV === 'production'
     SafetyTipsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
+    { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
+  ],
 })
 export class AppModule {
   // configure(consumer: MiddlewareConsumer) {

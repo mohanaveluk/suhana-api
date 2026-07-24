@@ -16,6 +16,20 @@ import { join } from 'path/win32';
 require('dotenv').config();
 
 
+// Last-resort crash logging. Deliberately uses console.error (synchronous, stderr) rather
+// than the winston/DB-backed CustomLoggerService — if the process is crashing, we can't
+// assume the DB connection or async transports are still healthy enough to log through.
+// stderr is always captured by Cloud Run's Cloud Logging regardless of app state.
+process.on('uncaughtException', (error) => {
+  console.error(`[FATAL] Uncaught exception at ${new Date().toISOString()}:`, error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error(`[FATAL] Unhandled rejection at ${new Date().toISOString()}:`, reason);
+  process.exit(1);
+});
+
 async function bootstrap() {
       // Wait for database to be available
   await waitForDatabase(getDatabaseConfig());
@@ -32,8 +46,8 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
-  app.useGlobalFilters(new AllExceptionsFilter());
-  app.useGlobalInterceptors(new LoggingInterceptor());
+  //app.useGlobalFilters(new AllExceptionsFilter());
+  //app.useGlobalInterceptors(new LoggingInterceptor());
   //app.useGlobalInterceptors(new AuditInterceptor(app.get(AuditRepository), app.get('ClinicContext')));
   
 
