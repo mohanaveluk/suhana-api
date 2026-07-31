@@ -1,25 +1,35 @@
-import { Module } from "@nestjs/common";
-import { AuditRepository } from "./audit.repository";
-import { AuditInterceptor } from "./audit.interceptor";
-import { ClinicContext } from "../../common/context/clinic-context.provider";
-import { CommonModule } from "src/common/common.module";
-import { REQUEST } from "@nestjs/core";
-import { Request } from 'express';
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuditLog } from './entity/audit-log.entity';
+import { AuditLogService } from './audit-log.service';
+import { RiskScoringEngine } from './risk-scoring.engine';
+import { AuditEmitter } from './audit.emitter';
+import { AuditLogListener } from './audit-log.listener';
+import { AuditInterceptor } from './audit.interceptor';
+import { AuditLogController } from './audit-log.controller';
+import { AdminAuditLogController } from './admin-audit-log.controller';
+import { LogModule } from '../logger/log.module';
 
+// Audit Log & User Risk Monitoring.
+//
+// Producers emit an `audit.log` event — via the @Audit() decorator (captured by
+// AuditInterceptor) or via AuditEmitter from inside a service. AuditLogListener
+// consumes the event and persists through AuditLogService, so no producer ever
+// touches the repository or blocks on logging.
+//
+// Requires EventEmitterModule.forRoot() to be registered once at the app root.
 @Module({
-  imports: [CommonModule],
+  imports: [TypeOrmModule.forFeature([AuditLog]), LogModule],
+  controllers: [AuditLogController, AdminAuditLogController],
   providers: [
-    // AuditRepository,
-    // {
-    //   provide: AuditInterceptor,
-    //   useFactory: (auditRepo: AuditRepository, request: Request) => {
-    //     return new AuditInterceptor(auditRepo, request); // Pass the Request object
-    //   },
-    //   inject: [AuditRepository, REQUEST], // Inject the Request object
-    // },
-    AuditRepository,
-    AuditInterceptor, // Register AuditInterceptor directly
+    AuditLogService,
+    RiskScoringEngine,
+    AuditEmitter,
+    AuditLogListener,
+    AuditInterceptor,
   ],
-  exports: [  AuditRepository, AuditInterceptor],
+  // Exported so other feature modules can emit domain audit events and reuse
+  // the interceptor / query service.
+  exports: [AuditEmitter, AuditInterceptor, AuditLogService],
 })
 export class AuditModule {}

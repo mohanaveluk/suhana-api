@@ -12,6 +12,9 @@ import { EmailService } from 'src/shared/email/email.service';
 import { shareProfileEmailTemplate, verifyEmailTemplate } from 'src/shared/email/templates/verify-email-template';
 import { ShareProfileDto } from './dto/share-profile.dto';
 import { EmailType } from '../email-history/entity/email-history.entity';
+import { AuditEmitter } from '../audit/audit.emitter';
+import { AuditEventType } from '../audit/enums/audit-event-type.enum';
+import { AuditEntityType } from '../audit/enums/audit-entity-type.enum';
 
 
 @Injectable()
@@ -23,8 +26,40 @@ export class ProfilesService {
     private cloudStorageService: CloudStorageService,
     private lookupService: LookupService,
     private emailService: EmailService,
-    private logger: CustomLoggerService
+    private logger: CustomLoggerService,
+    private auditEmitter: AuditEmitter,
   ) {}
+
+  // Scalar profile fields worth tracking for the audit trail / change detection.
+  private snapshotProfile(profile: Profile): Record<string, any> {
+    return {
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      age: profile.age,
+      dateOfBirth: profile.dateOfBirth,
+      religion: profile.religion,
+      caste: profile.caste,
+      motherTongue: profile.motherTongue,
+      city: profile.city,
+      state: profile.state,
+      country: profile.country,
+      willingToRelocate: profile.willingToRelocate,
+      educationLevel: profile.educationLevel,
+      educationField: profile.educationField,
+      institution: profile.institution,
+      occupationTitle: profile.occupationTitle,
+      company: profile.company,
+      annualIncome: profile.annualIncome,
+      workingStatus: profile.workingStatus,
+      height: profile.height,
+      weight: profile.weight,
+      fatherOccupation: profile.fatherOccupation,
+      motherOccupation: profile.motherOccupation,
+      siblings: profile.siblings,
+      familyValues: profile.familyValues,
+      aboutMe: profile.aboutMe,
+    };
+  }
 
   async findAll(search: SearchProfilesDto) {
     const page = search.page || 1;
@@ -186,6 +221,9 @@ export class ProfilesService {
       });
       if (!user?.profile) throw new NotFoundException('Profile not found');
 
+      // Snapshot the pre-update state for audit change detection (before any mutation).
+      const oldSnapshot = this.snapshotProfile(user.profile);
+
       // Photos are managed via dedicated endpoints (uploadProfileImage/addPhoto/deletePhoto).
       // Never let the profile update touch the eagerly-loaded `photos` collection: because the
       // relation is { cascade: true }, overwriting it with the DTO's (often empty) `photos`
@@ -237,6 +275,26 @@ export class ProfilesService {
       user.profile.profileCompleteness = this.calculateCompleteness(user.profile);
       const userSaved = await this.userRepo.save(user);
       const saved = await this.profileRepo.save(user.profile);
+
+      // Emit a domain audit event. The listener derives changed_fields from the
+      // old/new snapshots and persists asynchronously — this never blocks or
+      // fails the update.
+      const newSnapshot = this.snapshotProfile(saved);
+      const changed = Object.keys(newSnapshot).filter(
+        (k) => JSON.stringify(newSnapshot[k]) !== JSON.stringify(oldSnapshot[k]),
+      );
+      if (changed.length) {
+        this.auditEmitter.emit({
+          eventType: AuditEventType.PROFILE_UPDATED,
+          entityType: AuditEntityType.PROFILE,
+          entityId: saved.id,
+          userId,
+          profileId: saved.id,
+          oldValue: oldSnapshot,
+          newValue: newSnapshot,
+          description: 'Profile metadata updated',
+        });
+      }
 
       // Auto-capture unique city and occupation values for dropdown lookups
       await Promise.all([

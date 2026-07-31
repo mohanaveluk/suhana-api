@@ -9,10 +9,11 @@ import { CustomLoggerService } from '../logger/custom-logger.service';
 import { LogModule } from '../logger/log.module';
 import { EmailService } from 'src/shared/email/email.service';
 import { EmailModule } from 'src/shared/email/email.module';
+import { AuditModule } from '../audit/audit.module';
 
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Profile, ProfilePhoto, User]), LookupModule, LogModule, EmailModule],
+  imports: [TypeOrmModule.forFeature([Profile, ProfilePhoto, User]), LookupModule, LogModule, EmailModule, AuditModule],
   controllers: [ProfilesController],
   providers: [ProfilesService, CloudStorageService],
   exports: [ProfilesService],
