@@ -5,8 +5,6 @@ import { ValidationPipe } from '@nestjs/common';
 import * as http from 'http';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
-import { AuditInterceptor } from './modules/audit/audit.interceptor';
-import { AuditRepository } from './modules/audit/audit.repository';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { JwtService } from '@nestjs/jwt';
 import { waitForDatabase } from './shared/utils/database.util';

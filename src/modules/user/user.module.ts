@@ -7,8 +7,6 @@ import { CommonModule } from 'src/common/common.module';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { UserRepository } from './user.repository';
-import { AuditInterceptor } from '../audit/audit.interceptor';
-import { AuditRepository } from '../audit/audit.repository';
 import { RoleEntity } from './entity/roles.entity';
 import { User, UserBlock, UserReport } from './entity';
 
@@ -20,7 +18,7 @@ import { User, UserBlock, UserReport } from './entity';
     CommonModule,
   ],
   controllers: [UserController],
-  providers: [UserRepository, UserService, AuditInterceptor, AuditRepository, ClinicContext],
+  providers: [UserRepository, UserService, ClinicContext],
   exports: [UserService ],
 })
 export class UserModule {}

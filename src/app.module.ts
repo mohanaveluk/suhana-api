@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -11,6 +12,7 @@ import { adminConfig, getDatabaseConfig, googleCloudConfig, jwtConfig, smtpConfi
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { typeOrmConfig } from './config/typeorm.config';
 import { AuditModule } from './modules/audit/audit.module';
+import { AuditInterceptor } from './modules/audit/audit.interceptor';
 import { CommonModule } from './common/common.module';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -35,6 +37,7 @@ import { ImageModule } from './modules/image/image.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { ChatbotModule } from './modules/chatbot/chatbot.module';
 import { SafetyTipsModule } from './modules/safety-tips/safety-tips.module';
+import { TestimonialsModule } from './modules/testimonials/testimonials.module';
 
 const envFilePath = process.env.NODE_ENV === 'production'
   ? '.env'
@@ -52,6 +55,8 @@ const envFilePath = process.env.NODE_ENV === 'production'
       inject: [ConfigService],
       useFactory: typeOrmConfig,
     }),
+    // Global in-process event bus — powers the event-driven audit logging.
+    EventEmitterModule.forRoot(),
     CommonModule,
     LogModule,
     AuthModule,
@@ -79,12 +84,16 @@ const envFilePath = process.env.NODE_ENV === 'production'
     FeedbackModule,
     ChatbotModule,
     SafetyTipsModule,
+    TestimonialsModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
+    // Global @Audit() capture. useExisting reuses the AuditModule-provided
+    // instance (with AuditEmitter injected) rather than building a second one.
+    { provide: APP_INTERCEPTOR, useExisting: AuditInterceptor },
   ],
 })
 export class AppModule {
