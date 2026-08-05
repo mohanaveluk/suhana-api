@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MatchSourceType } from '../enums/match-source-type.enum';
 import { MatchFixedStatus } from '../enums/match-fixed-status.enum';
+import { VerificationMethod } from '../enums/verification-method.enum';
 
 export class MatchFixedResponseDto {
   @ApiProperty({ example: 'uuid-...' })
@@ -53,6 +54,20 @@ export class MatchFixedResponseDto {
 
   @ApiProperty({ example: false })
   allowPhotoPublish: boolean;
+
+  @ApiProperty({ example: false })
+  isVerified: boolean;
+
+  @ApiPropertyOptional({
+    enum: VerificationMethod,
+    description:
+      'PARTNER — confirmed by the matched Suhana partner. ADMIN — confirmed by Suhana staff, ' +
+      'used when the partner is not a Suhana user. Null when not yet verified.',
+  })
+  verificationMethod?: VerificationMethod;
+
+  @ApiPropertyOptional({ example: '2026-01-10T00:00:00.000Z' })
+  verifiedAt?: Date;
 
   @ApiProperty({ enum: MatchFixedStatus, example: MatchFixedStatus.ACTIVE })
   status: MatchFixedStatus;

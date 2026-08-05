@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MatchSourceType } from '../enums/match-source-type.enum';
+import { VerificationMethod } from '../enums/verification-method.enum';
 
 export class SuccessStoryResponseDto {
   @ApiProperty({ example: 'uuid-...' })
@@ -35,8 +36,18 @@ export class SuccessStoryResponseDto {
   @ApiProperty({ enum: MatchSourceType, example: MatchSourceType.SUHANA })
   matchSource: MatchSourceType;
 
-  @ApiProperty({ example: true, description: 'Both partners confirmed this match on Suhana' })
+  @ApiProperty({ example: true, description: 'This match has been confirmed as genuine' })
   isVerified: boolean;
+
+  @ApiPropertyOptional({
+    enum: VerificationMethod,
+    description:
+      'How the badge was earned. PARTNER — the matched Suhana partner confirmed it ' +
+      '("Verified by partner"). ADMIN — Suhana staff confirmed it, used for matches ' +
+      'made outside Suhana ("Verified by Suhana"). Null when not verified.',
+    example: VerificationMethod.PARTNER,
+  })
+  verificationMethod: VerificationMethod | null;
 
   @ApiPropertyOptional({ example: '2026-01-10T00:00:00.000Z' })
   verifiedAt: Date | null;

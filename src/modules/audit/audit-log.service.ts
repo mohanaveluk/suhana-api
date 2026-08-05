@@ -16,6 +16,7 @@ import {
   AdminAuditLogQueryDto,
   AuditLogItemDto,
   PaginatedAuditLogDto,
+  ProfileUpdateTrustDto,
   QueryAuditLogDto,
   RedFlagQueryDto,
   RedFlagResultDto,
@@ -298,6 +299,40 @@ export class AuditLogService {
       .sort((a, b) => b.overallRiskScore - a.overallRiskScore)
       .slice(0, limit);
   }
+
+  async getProfileIndicatorByUserId(
+    userId: string, profileId: string
+  ): Promise<ProfileUpdateTrustDto> {
+    const count = await this.auditRepo
+      .createQueryBuilder('audit')
+      .where('audit.profileId = :profileId', { profileId })
+      .andWhere('audit.eventType = :eventType', {
+        eventType: 'PROFILE_UPDATED',
+      })
+      .andWhere(
+        'audit.createdAt >= DATE_SUB(NOW(), INTERVAL 14 DAY)',
+      )
+      .getCount();
+
+    let trustIndicator:
+      | 'GREEN_FLAG'
+      | 'YELLOW_FLAG'
+      | 'RED_FLAG';
+
+    if (count > 5) {
+      trustIndicator = 'RED_FLAG';
+    } else if (count >= 3) {
+      trustIndicator = 'YELLOW_FLAG';
+    } else {
+      trustIndicator = 'GREEN_FLAG';
+    }
+
+    return {
+      userId,
+      updateCount: count,
+      trustIndicator,
+    };
+  }  
 
   // ── Internals ─────────────────────────────────────────────────────────────
   private async evaluateFactorsForUser(userId: string): Promise<EvaluatedFactor[]> {

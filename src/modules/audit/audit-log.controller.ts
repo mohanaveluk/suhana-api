@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, Request, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -10,6 +10,7 @@ import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { AuditLogService } from './audit-log.service';
 import {
   PaginatedAuditLogDto,
+  ProfileUpdateTrustDto,
   QueryAuditLogDto,
   RedFlagQueryDto,
   RedFlagResultDto,
@@ -78,4 +79,16 @@ export class AuditLogController {
   async getUserRiskAnalysis(@Param('userId') userId: string): Promise<RiskAnalysisDto> {
     return this.auditLogService.getUserRiskAnalysis(userId);
   }
+
+  // ── API 6 ────────────────────────────────────────────────────────────────
+  @Get('profile-indicator/:profileId')
+  @ApiOperation({ summary: 'Get profile update indicator by profile ID (admin)' })
+  @ApiResponse({ status: 200, description: 'Profile update indicator', type: ProfileUpdateTrustDto })
+  @ApiResponse({ status: 403, description: 'Forbidden - admin role required' })
+  async getProfileIndicator(
+    @Request() req: any,
+    @Param('profileId') profileId: string
+  ): Promise<ProfileUpdateTrustDto> {
+    return this.auditLogService.getProfileIndicatorByUserId(req.user.id, profileId);
+  }  
 }

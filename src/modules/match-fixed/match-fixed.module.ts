@@ -11,9 +11,9 @@ import { User, Profile } from '../user/entity';
 @Module({
   imports: [TypeOrmModule.forFeature([MatchFixed, User, Profile])],
   controllers: [
-    MatchFixedController,       // /profile/match-fixed  — authenticated user CRUD
+    MatchFixedController,        // /profile/match-fixed  — authenticated user CRUD + partner verify
     MatchFixedPublicController,  // /match-fixed/public   — no auth, homepage display
-    MatchFixedAdminController,   // /match-fixed/admin    — admin dashboard + partner verify
+    MatchFixedAdminController,   // /match-fixed/admin    — admin dashboard + admin verify
   ],
   providers: [MatchFixedService],
   exports: [MatchFixedService],
