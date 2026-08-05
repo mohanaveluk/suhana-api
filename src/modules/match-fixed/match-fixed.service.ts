@@ -14,7 +14,14 @@ import { AdminDashboardResponseDto } from './dto/admin-dashboard-response.dto';
 import { User, Profile } from '../user/entity';
 import { MatchSourceType } from './enums/match-source-type.enum';
 import { MatchFixedStatus } from './enums/match-fixed-status.enum';
+import { VerificationMethod } from './enums/verification-method.enum';
 import { ProfileStatus } from '../user/enums/profile-status.enum';
+
+export interface VerifyResult {
+  message: string;
+  isVerified: boolean;
+  verificationMethod: VerificationMethod;
+}
 
 @Injectable()
 export class MatchFixedService {
@@ -101,31 +108,48 @@ export class MatchFixedService {
   // Partner verification
   // ---------------------------------------------------------------------------
 
-  async verifyPartner(userId: string, matchFixedId: string): Promise<{ message: string; isVerified: boolean }> {
-    const record = await this.matchFixedRepo.findOne({ where: { id: matchFixedId } });
+  /**
+   * Peer verification — the matched Suhana partner confirms the match themselves.
+   * Only possible when the record is linked to a real Suhana account via matchedUserId.
+   */
+  async verifyPartner(userId: string, matchFixedId: string): Promise<VerifyResult> {
+    const record = await this.findVerifiableRecord(matchFixedId);
 
-    if (!record) throw new NotFoundException('Match Fixed record not found');
-    if (record.status !== MatchFixedStatus.ACTIVE) {
-      throw new BadRequestException('This record is no longer active');
+    if (!record.matchedUserId) {
+      throw new BadRequestException(
+        'This match has no linked Suhana partner, so it cannot be confirmed by a partner. ' +
+          'Contact Suhana support to request admin verification.',
+      );
     }
     if (record.matchedUserId !== userId) {
       throw new ForbiddenException('Only the matched partner can verify this record');
     }
-    if (record.isVerified) {
-      throw new BadRequestException('This match has already been verified');
-    }
 
-    record.isVerified = true;
-    record.verifiedAt = new Date();
-    record.verifiedByPartnerId = userId;
-    record.updatedBy = userId;
-
-    await this.matchFixedRepo.save(record);
-
-    return {
+    return this.applyVerification(record, {
+      userId,
+      method: VerificationMethod.PARTNER,
       message: 'Match verified successfully. Your success story is now marked as Verified!',
-      isVerified: true,
-    };
+    });
+  }
+
+  /**
+   * Admin verification — used when no Suhana partner exists to confirm the match
+   * (external sources such as FAMILY, FRIEND or OTHER_MATRIMONY). Works for any
+   * active record regardless of source.
+   */
+  async verifyByAdmin(
+    adminId: string,
+    matchFixedId: string,
+    note?: string,
+  ): Promise<VerifyResult> {
+    const record = await this.findVerifiableRecord(matchFixedId);
+
+    return this.applyVerification(record, {
+      userId: adminId,
+      method: VerificationMethod.ADMIN,
+      note,
+      message: 'Match verified by Suhana. The success story is now marked as Verified!',
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -311,6 +335,41 @@ export class MatchFixedService {
     await this.profileRepo.save(profile);
   }
 
+  private async findVerifiableRecord(id: string): Promise<MatchFixed> {
+    const record = await this.matchFixedRepo.findOne({ where: { id } });
+
+    if (!record) throw new NotFoundException('Match Fixed record not found');
+    if (record.status !== MatchFixedStatus.ACTIVE) {
+      throw new BadRequestException('This record is no longer active');
+    }
+    if (record.isVerified) {
+      throw new BadRequestException('This match has already been verified');
+    }
+    return record;
+  }
+
+  private async applyVerification(
+    record: MatchFixed,
+    opts: { userId: string; method: VerificationMethod; note?: string; message: string },
+  ): Promise<VerifyResult> {
+    record.isVerified = true;
+    record.verifiedAt = new Date();
+    record.verificationMethod = opts.method;
+    record.verifiedByUserId = opts.userId;
+    record.updatedBy = opts.userId;
+
+    if (opts.method === VerificationMethod.PARTNER) {
+      record.verifiedByPartnerId = opts.userId;
+    }
+    if (opts.note) {
+      record.verificationNote = opts.note;
+    }
+
+    await this.matchFixedRepo.save(record);
+
+    return { message: opts.message, isVerified: true, verificationMethod: opts.method };
+  }
+
   private async findOwnedRecord(id: string, userId: string): Promise<MatchFixed> {
     const matchFixed = await this.matchFixedRepo.findOne({ where: { id } });
     if (!matchFixed) throw new NotFoundException('Match Fixed record not found');
@@ -360,6 +419,7 @@ export class MatchFixedService {
       marriageDate: mf.marriageDate ?? null,
       matchSource: mf.matchSourceType,
       isVerified: mf.isVerified,
+      verificationMethod: mf.verificationMethod ?? null,
       verifiedAt: mf.verifiedAt ?? null,
       createdAt: mf.createdAt,
     };

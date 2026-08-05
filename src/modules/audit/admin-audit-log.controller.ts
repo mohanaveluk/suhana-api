@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Request, Param } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -12,6 +12,7 @@ import { AuditLogService } from './audit-log.service';
 import {
   AdminAuditLogQueryDto,
   PaginatedAuditLogDto,
+  ProfileUpdateTrustDto,
   RiskAnalysisDto,
   TopRedFlagsQueryDto,
 } from './dto/audit-log.dto';

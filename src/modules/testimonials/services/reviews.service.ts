@@ -62,6 +62,7 @@ export class ReviewsService {
       entityType: AuditEntityType.REVIEW,
       entityId: saved.id,
       userId,
+      profileId: dto.profileId ?? null,
       newValue: { title: saved.title, reviewType: saved.reviewType, overallRating: saved.overallRating },
       description: 'Review submitted',
     });

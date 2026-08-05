@@ -147,3 +147,9 @@ export class RedFlagResultDto {
   @ApiProperty({ enum: RiskLevel }) riskLevel: RiskLevel;
   @ApiProperty({ example: 'Profile modified excessively in short period.' }) recommendation: string;
 }
+
+export class ProfileUpdateTrustDto {
+  @ApiProperty({ example: 'uuid' }) userId: string;
+  @ApiProperty({ example: 0 }) updateCount: number;
+  @ApiProperty({ example: 'GREEN_FLAG' }) trustIndicator: 'GREEN_FLAG' | 'YELLOW_FLAG' | 'RED_FLAG';
+}
