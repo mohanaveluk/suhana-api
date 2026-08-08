@@ -71,6 +71,68 @@ export class CloudStorageService {
     }
   }
 
+  /**
+   * Uploads an audio file under an explicit object name and returns the full
+   * storage metadata (the plain uploadFile only returns a URL, and generates its
+   * own uuid-prefixed name).
+   *
+   * The caller supplies `fileName` so it can apply its own naming scheme; the
+   * name is never derived from client input, and an existing object is never
+   * overwritten.
+   */
+  async uploadVoiceFile(
+    file: Express.Multer.File,
+    folder: string,
+    fileName?: string,
+  ): Promise<{
+    url: string;
+    bucket: string;
+    fileName: string;
+    folder: string;
+    mimeType: string;
+    size: number;
+  }> {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('No file provided');
+    }
+
+    const objectName = fileName || `${uuidv4()}-${file.originalname}`;
+    const fullPath = `${folder}/${objectName}`;
+
+    try {
+      const bucket = this.storage.bucket(this.bucketName);
+      const target = bucket.file(fullPath);
+
+      await new Promise<void>((resolve, reject) => {
+        const stream = target.createWriteStream({
+          metadata: { contentType: file.mimetype },
+          validation: 'md5',
+          // Fails the write if the object already exists, so a name collision
+          // can never silently destroy a previous upload.
+          preconditionOpts: { ifGenerationMatch: 0 },
+        });
+
+        stream.on('error', (error) =>
+          reject(new BadRequestException(`Upload failed: ${error.message}`)),
+        );
+        stream.on('finish', () => resolve());
+        stream.end(file.buffer);
+      });
+
+      return {
+        url: `https://storage.googleapis.com/${this.bucketName}/${fullPath}`,
+        bucket: this.bucketName,
+        fileName: objectName,
+        folder,
+        mimeType: file.mimetype,
+        size: file.buffer.length,
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      throw new BadRequestException(`Upload service error: ${error.message}`);
+    }
+  }
+
   async deleteFile(fileUrl: string): Promise<void> {
     try {
       // Extract filename from Google Cloud Storage URL
@@ -107,7 +169,7 @@ export class CloudStorageService {
       {
         label: 'image',
         mimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
-        maxMb: 5,
+        maxMb: 8,
       },
       {
         label: 'document',

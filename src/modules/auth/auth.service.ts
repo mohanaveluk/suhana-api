@@ -197,9 +197,18 @@ export class AuthService {
         updateProfileDto.password = hashedPassword;
       }
 
+      // A changed mobile number is unproven — clear the verified flag so the
+      // user must re-verify via POST /users/mobile/send-verification.
+      const mobileChanged =
+        !!updateProfileDto.mobile && updateProfileDto.mobile !== user.mobile;
+
       // Update user properties
       Object.assign(user, updateProfileDto);
       user.updated_at = new Date();
+
+      if (mobileChanged) {
+        user.isMobileVerified = 0;
+      }
 
       await this.userRepository.save(user);
       return { message: 'Profile updated successfully', profileImage: user.profile_image };
@@ -975,9 +984,19 @@ export class AuthService {
         }
       }
 
+      // A changed mobile number is unproven — clear the verified flag so the
+      // user must re-verify via POST /users/mobile/send-verification.
+      const mobileChanged =
+        !!updateUserDto.mobile && updateUserDto.mobile !== user.mobile;
+
       Object.assign(user, updateUserDto);
       user.role = role;
       user.role_id = role?.id || null;
+
+      if (mobileChanged) {
+        user.isMobileVerified = 0;
+      }
+
       return await this.userRepository.save(user);
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof BadRequestException) {

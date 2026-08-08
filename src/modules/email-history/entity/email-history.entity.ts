@@ -15,6 +15,7 @@ export enum EmailType {
   SYSTEM_NOTIFICATION     = 'SYSTEM_NOTIFICATION',
   EMAIL_VERIFICATION      = 'EMAIL_VERIFICATION',
   LOGIN_OTC               = 'LOGIN_OTC',
+  MOBILE_VERIFIED         = 'MOBILE_VERIFIED',
 }
 
 export enum EmailStatus {

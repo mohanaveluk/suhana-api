@@ -7,3 +7,9 @@ export enum ImageContext {
   ENGAGEMENT = 'engagement',
   WEDDING = 'wedding',
 }
+
+export enum MediaContext {
+  VOICE = 'voice',
+  VIDEO = 'video',
+  DOCUMENT = 'document',
+}

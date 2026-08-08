@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Patch, Post, Delete, Body, Param,
+  Controller, Get, Patch, Post, Put, Delete, Body, Param,
   Query, UseGuards, Request,
   UseInterceptors,
   UploadedFile,
@@ -13,6 +13,9 @@ import { AuthGuard } from '@nestjs/passport';
 import { ProfilesService } from './profiles.service';
 import { UpdateProfileDto, SearchProfilesDto } from './dto/profile.dto';
 import { ShareProfileDto } from './dto/share-profile.dto';
+import {
+  SetVoiceIntroductionDto, VoiceIntroductionResponseDto,
+} from './dto/voice-introduction.dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -102,6 +105,49 @@ export class ProfilesController {
   updateProfileByAdmx(@Request() req: any, @Param('id') id: string, @Body() dto: UpdateProfileDto) {
     const domain = `${req.get('origin')}`; 
     return this.profilesService.update(id, domain, dto);
+  }
+
+  // PUT /api/v1/profiles/me/voice-introduction
+  @Put('me/voice-introduction')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Save the voice introduction URL on the profile',
+    description:
+      'Attaches an already-uploaded voice introduction to the authenticated user\'s profile.\n\n' +
+      'Upload the recording first via `POST /profile/voice/upload`, then send the `audioUrl` it ' +
+      'returned here. The URL is validated against your own upload history — a URL belonging to ' +
+      'another member, or any external URL, is rejected.\n\n' +
+      'The same field can also be set through `PATCH /profiles/me` as part of a wider profile edit.',
+  })
+  @ApiBody({ type: SetVoiceIntroductionDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Voice introduction saved',
+    type: VoiceIntroductionResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Missing or unrecognised voice introduction URL' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — missing or invalid JWT' })
+  @ApiResponse({ status: 404, description: 'User or profile not found' })
+  setVoiceIntroduction(@Request() req: any, @Body() dto: SetVoiceIntroductionDto) {
+    return this.profilesService.setVoiceIntroduction(req.user.id, dto.voiceIntroductionUrl);
+  }
+
+  // DELETE /api/v1/profiles/me/voice-introduction
+  @Delete('me/voice-introduction')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Remove the voice introduction from the profile',
+    description:
+      'Clears `voiceIntroductionUrl` on the profile. The uploaded file itself is retained in ' +
+      'storage and stays listed under `GET /profile/voice/my`.',
+  })
+  @ApiResponse({ status: 200, description: 'Voice introduction removed' })
+  @ApiResponse({ status: 401, description: 'Unauthorized — missing or invalid JWT' })
+  @ApiResponse({ status: 404, description: 'User or profile not found' })
+  removeVoiceIntroduction(@Request() req: any) {
+    return this.profilesService.removeVoiceIntroduction(req.user.id);
   }
 
   @Post('share')

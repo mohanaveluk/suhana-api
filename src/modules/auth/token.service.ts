@@ -47,10 +47,12 @@ export class TokenService {
         username: user.first_name + ' ' + user.last_name,
         identity: user.first_name + ' ' + user.last_name, // Use major or organisation_name as identity
         gender: user.gender,
+        mobile: user.mobile,
         membership: user.membership,
         role: userRole,
         is_email_verified: user.is_email_verified,
         is_verified: user.is_verified,
+        is_mobile_verified: user.isMobileVerified === 1,
         created_at: user.created_at,
         updated_at: user.updated_at,
         last_active: user.last_active,

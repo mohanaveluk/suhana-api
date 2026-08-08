@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 
@@ -15,6 +15,7 @@ import { EmailType } from '../email-history/entity/email-history.entity';
 import { AuditEmitter } from '../audit/audit.emitter';
 import { AuditEventType } from '../audit/enums/audit-event-type.enum';
 import { AuditEntityType } from '../audit/enums/audit-entity-type.enum';
+import { VoiceUploadService } from '../media/voice-upload.service';
 
 
 @Injectable()
@@ -28,6 +29,7 @@ export class ProfilesService {
     private emailService: EmailService,
     private logger: CustomLoggerService,
     private auditEmitter: AuditEmitter,
+    private voiceUploadService: VoiceUploadService,
   ) {}
 
   // Scalar profile fields worth tracking for the audit trail / change detection.
@@ -58,6 +60,7 @@ export class ProfilesService {
       siblings: profile.siblings,
       familyValues: profile.familyValues,
       aboutMe: profile.aboutMe,
+      voiceIntroductionUrl: profile.voiceIntroductionUrl,
     };
   }
 
@@ -266,6 +269,17 @@ export class ProfilesService {
       };
       user.updated_at = user.verification_code_expiry = new Date();
       user.profile.horoscopeDocUrl = dto.horoscope?.documentUrl || user.profile.horoscopeDocUrl;
+
+      // Voice introduction: only changed when the key is actually present, so an
+      // ordinary profile edit never wipes it. An explicit null clears it.
+      //
+      // Assigned in both branches on purpose: the Object.assign above copies the
+      // DTO's `undefined` over the loaded value, and leaving it undefined would
+      // show up as a spurious change in the audit diff below.
+      user.profile.voiceIntroductionUrl =
+        dto.voiceIntroductionUrl !== undefined
+          ? (dto.voiceIntroductionUrl || null)
+          : (oldSnapshot.voiceIntroductionUrl ?? null);
       // user.profile.photos.forEach((photo) => {
       //   const updatedPhoto = dto.photos?.find((p) => p.id === photo.id);
       //   if (updatedPhoto) {
@@ -449,6 +463,94 @@ export class ProfilesService {
     return Math.round((filled / fields.length) * 100);
   }
 
+  /**
+   * Attach an uploaded voice introduction to the caller's profile.
+   *
+   * The URL is verified against the caller's own upload history rather than
+   * trusted as-is — otherwise any member could point their profile at another
+   * member's recording, or at an arbitrary external URL, simply by posting a
+   * different string here.
+   */
+  async setVoiceIntroduction(userId: string, voiceIntroductionUrl: string) {
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+      relations: ['profile'],
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (!user.profile) throw new NotFoundException('Profile not found');
+
+    const media = await this.voiceUploadService.findOwnedVoiceByUrl(
+      userId,
+      voiceIntroductionUrl,
+    );
+    if (!media) {
+      throw new BadRequestException(
+        'Unknown voice introduction URL. Upload the recording via ' +
+        '/profile/voice/upload first, then save the URL it returns.',
+      );
+    }
+
+    const previous = user.profile.voiceIntroductionUrl ?? null;
+    user.profile.voiceIntroductionUrl = voiceIntroductionUrl;
+    const saved = await this.profileRepo.save(user.profile);
+
+    this.auditEmitter.emit({
+      eventType: AuditEventType.PROFILE_UPDATED,
+      entityType: AuditEntityType.PROFILE,
+      entityId: saved.id,
+      userId,
+      profileId: saved.id,
+      oldValue: { voiceIntroductionUrl: previous },
+      newValue: { voiceIntroductionUrl },
+      changedFields: ['voiceIntroductionUrl'],
+      description: 'Voice introduction attached to profile',
+    });
+
+    return {
+      success: true,
+      message: 'Voice introduction saved successfully.',
+      data: {
+        profileId: saved.id,
+        voiceIntroductionUrl: saved.voiceIntroductionUrl,
+        durationSeconds: media.durationSeconds,
+      },
+    };
+  }
+
+  /** Remove the voice introduction from the profile. The GCS object is retained. */
+  async removeVoiceIntroduction(userId: string) {
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+      relations: ['profile'],
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (!user.profile) throw new NotFoundException('Profile not found');
+
+    const previous = user.profile.voiceIntroductionUrl ?? null;
+    user.profile.voiceIntroductionUrl = null;
+    const saved = await this.profileRepo.save(user.profile);
+
+    if (previous) {
+      this.auditEmitter.emit({
+        eventType: AuditEventType.PROFILE_UPDATED,
+        entityType: AuditEntityType.PROFILE,
+        entityId: saved.id,
+        userId,
+        profileId: saved.id,
+        oldValue: { voiceIntroductionUrl: previous },
+        newValue: { voiceIntroductionUrl: null },
+        changedFields: ['voiceIntroductionUrl'],
+        description: 'Voice introduction removed from profile',
+      });
+    }
+
+    return {
+      success: true,
+      message: 'Voice introduction removed successfully.',
+      data: { profileId: saved.id, voiceIntroductionUrl: null },
+    };
+  }
+
   private toUserProfileResponse(user: User) {
     const userDetail = {
       id: user.id,
@@ -457,6 +559,7 @@ export class ProfilesService {
       gender: user.gender,
       membership: user.membership,
       isEmailVerified: user.is_email_verified,
+      isMobileVerified: user.isMobileVerified === 1,
       isVerified: user.is_verified,
       profileImage: user.profile_image,
       lastActive: user.last_active,
@@ -472,6 +575,9 @@ export class ProfilesService {
   }
 
   private toProfileResponse(profile: Profile) {
+    if (profile?.user) {
+      profile.user.mobile = '**********';
+    }
     return {
       user: profile.user,
       userId: profile.id,
@@ -487,11 +593,14 @@ export class ProfilesService {
       weight: profile.weight,
       complexion: profile.complexion,
       aboutMe: profile.aboutMe,
+      interests: profile.interests,
       photoPrivacy: profile.photoPrivacy,
       status: profile.status,
       profileCompleteness: profile.profileCompleteness,
       videoIntroUrl: profile.videoIntroUrl,
+      voiceIntroductionUrl: profile.voiceIntroductionUrl ?? null,
       profileCode: profile.profileCode,
+      //isMobileVerified: profile.user.isMobileVerified === 1,
       location: {
         city: profile.city,
         state: profile.state,

@@ -152,6 +152,12 @@ export class Profile {
   @Column({ nullable: true })
   videoIntroUrl: string;
 
+  // Public URL of the member's 30-second voice introduction, produced by
+  // POST /profile/voice/upload. The upload endpoint only returns the URL —
+  // this column is what actually attaches it to the profile.
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  voiceIntroductionUrl: string;
+
   @Column({ nullable: true })
   horoscopeDocUrl: string;
 
