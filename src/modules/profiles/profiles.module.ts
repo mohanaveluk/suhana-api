@@ -10,10 +10,13 @@ import { LogModule } from '../logger/log.module';
 import { EmailService } from 'src/shared/email/email.service';
 import { EmailModule } from 'src/shared/email/email.module';
 import { AuditModule } from '../audit/audit.module';
+// Provides VoiceUploadService, used to verify a voice URL belongs to the caller
+// before it is attached to their profile.
+import { MediaModule } from '../media/media.module';
 
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Profile, ProfilePhoto, User]), LookupModule, LogModule, EmailModule, AuditModule],
+  imports: [TypeOrmModule.forFeature([Profile, ProfilePhoto, User]), LookupModule, LogModule, EmailModule, AuditModule, MediaModule],
   controllers: [ProfilesController],
   providers: [ProfilesService, CloudStorageService],
   exports: [ProfilesService],

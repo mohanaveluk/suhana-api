@@ -8,13 +8,14 @@ import { EDUCATION_TIER } from './matches-lookup';
 import { scoreAgeGap, scoreIncome, scoreMotherTongue, computeCompatibilityRules, generateBadges } from '../../shared/matches/matches.helper';
 import { Badge } from 'src/shared/matches/matches.model';
 import { InterestsService } from '../interests/interests.service';
+import { AuditLogService } from '../audit/audit-log.service';
 import { match } from 'assert';
 
 type TextBlock = Anthropic.Messages.TextBlock;
 
 @Injectable()
 export class MatchesService {
-  private readonly MAX_CANDIDATES = 20; // Max profiles to consider when generating matches
+  private readonly MAX_CANDIDATES = 4; // Max profiles to consider when generating matches
   private PREMIUM_TIERS = new Set(['gold', 'platinum']);
   private FEATURE_GATE_MSG = 'AI-powered compatibility report is available for Gold and Platinum members only. ' +
   'Please upgrade your membership to access this feature.';
@@ -28,6 +29,7 @@ export class MatchesService {
     @InjectRepository(UserSubscription) private readonly userSubscriptionRepo: Repository<UserSubscription>,
     @InjectRepository(HoroscopeCompatibilityReport) private readonly horoscopeReportRepo: Repository<HoroscopeCompatibilityReport>,
     private readonly interestService: InterestsService,
+    private readonly auditLogService: AuditLogService,
     private readonly anthropic: Anthropic,
   ) {}
 
@@ -212,6 +214,7 @@ export class MatchesService {
       where: { userId },
       relations: ['matchedUser', 'matchedUser.profile', 'matchedUser.profile.photos'],
       order: { suggestedAt: 'DESC' },
+      take: this.MAX_CANDIDATES,
     });
 
     // Attach the interest status (pending/accepted/declined) between the current
@@ -219,8 +222,59 @@ export class MatchesService {
     const interestStatusMap = await this.buildInterestStatusMap(
       userId,
       matches.map(m => m.matchedUserId),
-    );    
-    return this.formatMatches(matches, interestStatusMap);
+    );
+
+    // Attach each matched profile's trust indicator, derived from how often that
+    // profile was edited in the last 14 days (frequent edits are a red flag).
+    const trustIndicatorMap = await this.buildTrustIndicatorMap(matches);
+
+    return this.formatMatches(matches, interestStatusMap, trustIndicatorMap);
+  }
+
+  /**
+   * Build a map of `matchedUserId -> trustIndicator` for the given matches.
+   *
+   * Delegates to AuditLogService.getProfileIndicatorByUserId, which counts
+   * PROFILE_UPDATED events on the profile over the last 14 days and grades it
+   * GREEN_FLAG / YELLOW_FLAG / RED_FLAG.
+   *
+   * One query per distinct profile, issued concurrently. A failure for a single
+   * profile yields null for that entry rather than failing the whole match list —
+   * a trust badge is supplementary and must not take down the matches response.
+   */
+  private async buildTrustIndicatorMap(
+    matches: Match[],
+  ): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    if (!matches.length) return map;
+
+    // Dedupe by profile — the same profile can appear under several match rows.
+    const targets = new Map<string, { userId: string; profileId: string }>();
+    for (const m of matches) {
+      const profileId = m.matchedUser?.profile?.id;
+      if (!profileId || targets.has(profileId)) continue;
+      targets.set(profileId, { userId: m.matchedUserId, profileId });
+    }
+    if (!targets.size) return map;
+
+    const results = await Promise.all(
+      [...targets.values()].map(async ({ userId, profileId }) => {
+        try {
+          const trust = await this.auditLogService.getProfileIndicatorByUserId(
+            userId,
+            profileId,
+          );
+          return { userId, trustIndicator: trust?.trustIndicator ?? null };
+        } catch {
+          return { userId, trustIndicator: null };
+        }
+      }),
+    );
+
+    for (const r of results) {
+      if (r.trustIndicator) map.set(r.userId, r.trustIndicator);
+    }
+    return map;
   }
 
   async getMatchesByUsers(userId: string, matchedUserId: string) {
@@ -727,11 +781,21 @@ Return ONLY this JSON structure (fill every field — do not omit any key):
 
 
 
-  private formatMatches(matches: Match[], interestStatusMap?: Map<string, string>) {
-    return matches.map((m) => this.formatMatch(m, interestStatusMap?.get(m.matchedUserId)));
+  private formatMatches(
+    matches: Match[],
+    interestStatusMap?: Map<string, string>,
+    trustIndicatorMap?: Map<string, string>,
+  ) {
+    return matches.map((m) =>
+      this.formatMatch(
+        m,
+        interestStatusMap?.get(m.matchedUserId),
+        trustIndicatorMap?.get(m.matchedUserId),
+      ),
+    );
   }
 
-  private formatMatch(match: Match, interestStatus?: string) {
+  private formatMatch(match: Match, interestStatus?: string, trustIndicator?: string) {
     const profile = match.matchedUser?.profile;
     return {
       user: match.matchedUser,
@@ -742,6 +806,10 @@ Return ONLY this JSON structure (fill every field — do not omit any key):
       badges: match.badges,
       status: match.status,
       interestStatus: interestStatus ?? null,
+      // GREEN_FLAG | YELLOW_FLAG | RED_FLAG — based on how often the matched
+      // profile was edited in the last 14 days. Null when not evaluated.
+      trustIndicator: trustIndicator ?? null,
+      isMobileVerified: match.matchedUser?.isMobileVerified ?? false,
       currentStep: match.currentStep,
       suggestedAt: match.suggestedAt,
       matchedUserId: match.matchedUserId,
@@ -756,6 +824,8 @@ Return ONLY this JSON structure (fill every field — do not omit any key):
         motherTongue: profile.motherTongue,
         height: profile.height,
         aboutMe: profile.aboutMe,
+        voiceIntroductionUrl: profile.voiceIntroductionUrl ?? '',
+        videoIntroUrl: profile.videoIntroUrl ?? '',
         location: { city: profile.city, state: profile.state, country: profile.country, willingToRelocate: profile.willingToRelocate },
         education: { level: profile.educationLevel, field: profile.educationField, institution: profile.institution },
         occupation: { title: profile.occupationTitle, company: profile.company, annualIncome: profile.annualIncome, workingStatus: profile.workingStatus },

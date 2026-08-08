@@ -8,6 +8,7 @@ import { Interest } from '../interests/entity/interest.entity';
 import { InterestsModule } from '../interests/interests.module';
 import { EmailModule } from 'src/shared/email/email.module';
 import { LogModule } from '../logger/log.module';
+import { AuditModule } from '../audit/audit.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
@@ -16,6 +17,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     InterestsModule,
     EmailModule,
     LogModule,
+    AuditModule,
     ConfigModule
   ],
   controllers: [MatchesController],

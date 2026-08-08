@@ -38,6 +38,7 @@ import { FeedbackModule } from './modules/feedback/feedback.module';
 import { ChatbotModule } from './modules/chatbot/chatbot.module';
 import { SafetyTipsModule } from './modules/safety-tips/safety-tips.module';
 import { TestimonialsModule } from './modules/testimonials/testimonials.module';
+import { MediaModule } from './modules/media/media.module';
 
 const envFilePath = process.env.NODE_ENV === 'production'
   ? '.env'
@@ -85,6 +86,7 @@ const envFilePath = process.env.NODE_ENV === 'production'
     ChatbotModule,
     SafetyTipsModule,
     TestimonialsModule,
+    MediaModule,
   ],
   controllers: [AppController],
   providers: [

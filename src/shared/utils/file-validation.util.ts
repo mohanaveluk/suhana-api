@@ -10,4 +10,4 @@ export const imageFileFilter = (req: any, file: Express.Multer.File, callback: F
   callback(null, true);
 };
 
-export const maxFileSize = 5 * 1024 * 1024; // 5MB
+export const maxFileSize = 8 * 1024 * 1024; // 5MB

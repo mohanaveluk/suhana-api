@@ -11,6 +11,11 @@ export enum AuditEventType {
   EMAIL_CHANGED = 'EMAIL_CHANGED',
   MOBILE_CHANGED = 'MOBILE_CHANGED',
 
+  // Mobile number ownership verification (OTP flow)
+  MOBILE_VERIFICATION_SENT = 'MOBILE_VERIFICATION_SENT',
+  MOBILE_VERIFIED = 'MOBILE_VERIFIED',
+  MOBILE_VERIFICATION_FAILED = 'MOBILE_VERIFICATION_FAILED',
+
   // ── Profile ──────────────────────────────────────────────────────────────
   PROFILE_CREATED = 'PROFILE_CREATED',
   PROFILE_UPDATED = 'PROFILE_UPDATED',

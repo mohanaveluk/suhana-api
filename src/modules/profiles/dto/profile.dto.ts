@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString, IsOptional, IsNumber, IsEnum, IsBoolean,
-  IsArray, Min, Max, ValidateNested,
+  IsArray, Min, Max, MaxLength, ValidateNested, IsNotEmpty, IsUrl,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -235,6 +235,16 @@ export class UpdateProfileDto {
   @ApiPropertyOptional({ example: 'https://example.com/video-intro.mp4' })
   @IsOptional() @IsString()
   videoIntroUrl?: string;
+
+  @ApiPropertyOptional({
+    example:
+      'https://storage.googleapis.com/inv-images/matrimony/voice-introduction/p123/voice-20260806-143522-a1b2c3.mp3',
+    description:
+      'Public URL of the voice introduction, as returned by POST /profile/voice/upload. ' +
+      'Send null to clear it.',
+  })
+  @IsOptional() @IsString() @MaxLength(500)
+  voiceIntroductionUrl?: string | null;
 
   @ApiPropertyOptional({ type: HoroscopeDto })
   @IsOptional() @ValidateNested()

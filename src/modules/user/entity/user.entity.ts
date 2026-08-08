@@ -36,6 +36,15 @@ export class User {
   @Column({ default: false })
   is_email_verified: boolean;
 
+  // Set to 1 only after the user proves ownership of `mobile` via OTP.
+  // Reset to 0 whenever `mobile` changes — a new number is unproven.
+  @Column({
+    name: 'is_mobile_verified',
+    type: 'tinyint',
+    default: 0,
+  })
+  isMobileVerified: number;
+
   @Column({ nullable: true })
   verification_code: string;
 
