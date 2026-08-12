@@ -42,6 +42,7 @@ export class ProfilesService {
       religion: profile.religion,
       caste: profile.caste,
       motherTongue: profile.motherTongue,
+      maritalStatus: profile.maritalStatus,
       city: profile.city,
       state: profile.state,
       country: profile.country,
@@ -124,7 +125,7 @@ export class ProfilesService {
     });    
 
     return {
-      data: data.map((p) => this.toProfileResponse(p)),
+      profiles: data.map((p) => this.toProfileResponse(p)),
       total,
       page,
       limit,
@@ -589,6 +590,7 @@ export class ProfilesService {
       religion: profile.religion,
       caste: profile.caste,
       motherTongue: profile.motherTongue,
+      maritalStatus: profile.maritalStatus ?? null,
       height: profile.height,
       weight: profile.weight,
       complexion: profile.complexion,

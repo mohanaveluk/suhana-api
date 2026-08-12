@@ -39,6 +39,7 @@ import { ChatbotModule } from './modules/chatbot/chatbot.module';
 import { SafetyTipsModule } from './modules/safety-tips/safety-tips.module';
 import { TestimonialsModule } from './modules/testimonials/testimonials.module';
 import { MediaModule } from './modules/media/media.module';
+import { SearchModule } from './modules/search/search.module';
 
 const envFilePath = process.env.NODE_ENV === 'production'
   ? '.env'
@@ -87,6 +88,7 @@ const envFilePath = process.env.NODE_ENV === 'production'
     SafetyTipsModule,
     TestimonialsModule,
     MediaModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [
