@@ -1,9 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString, IsOptional, IsNumber, IsEnum, IsBoolean,
-  IsArray, Min, Max, MaxLength, ValidateNested, IsNotEmpty, IsUrl,
+  IsArray, Min, Max, MaxLength, ValidateNested, IsNotEmpty, IsUrl, IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import {
+  MaritalStatus, MARITAL_STATUS_VALUES,
+} from '../../user/enums/marital-status.enum';
 
 export class LocationDto {
   @ApiPropertyOptional({ example: 'Helotes' })
@@ -231,6 +234,20 @@ export class UpdateProfileDto {
   @ApiPropertyOptional({ example: 75 })
   @IsOptional() @IsNumber() @Min(0) @Max(100)
   profileCompleteness?: number;
+
+  @ApiPropertyOptional({
+    example: MaritalStatus.NEVER_MARRIED,
+    enum: MARITAL_STATUS_VALUES,
+    description:
+      'Marital status. "Never Married" is the canonical value for single/unmarried. ' +
+      'There is deliberately no "Married" option — see MaritalStatus. ' +
+      'Filterable by AI search via POST /search/ai.',
+  })
+  @IsOptional()
+  @IsIn(MARITAL_STATUS_VALUES, {
+    message: `maritalStatus must be one of: ${MARITAL_STATUS_VALUES.join(', ')}`,
+  })
+  maritalStatus?: string;
 
   @ApiPropertyOptional({ example: 'https://example.com/video-intro.mp4' })
   @IsOptional() @IsString()

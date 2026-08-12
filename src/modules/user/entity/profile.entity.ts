@@ -5,6 +5,7 @@ import {
 import { User } from './user.entity';
 import { ProfilePhoto } from './profile-photo.entity';
 import { ProfileStatus } from '../enums/profile-status.enum';
+import { MARITAL_STATUS_VALUES } from '../enums/marital-status.enum';
 
 @Entity('profiles')
 export class Profile {
@@ -31,6 +32,17 @@ export class Profile {
 
   @Column({ nullable: true })
   caste: string;
+
+  // Nullable rather than defaulted: existing profiles predate this column and
+  // asserting "Never Married" for them would misrepresent real people. Collect
+  // it in the profile form, then backfill deliberately.
+  @Column({
+    type: 'enum',
+    enum: MARITAL_STATUS_VALUES,
+    nullable: true,
+    name: 'marital_status',
+  })
+  maritalStatus: string;
 
   @Column()
   motherTongue: string;
