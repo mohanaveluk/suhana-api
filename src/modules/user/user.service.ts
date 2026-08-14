@@ -9,6 +9,7 @@ import { UserRepository } from './user.repository';
 import { User, UserBlock, UserReport } from './entity';
 import { RoleEntity } from './entity/roles.entity';
 import { Membership } from './enums/profile-status.enum';
+import { EncryptionService } from 'src/shared/services/encryption.service';
 
 @Injectable()
 export class UserService {
@@ -22,6 +23,7 @@ export class UserService {
         private readonly blockRepo: Repository<UserBlock>,
         @InjectRepository(UserReport)
         private readonly reportRepo: Repository<UserReport>,
+        private readonly encryptionService: EncryptionService
     ){    }
 
     async validateAccount(uniqueId) {
@@ -59,6 +61,18 @@ export class UserService {
     });
     if (!user) throw new NotFoundException('User not found');
     return user;
+  }
+
+  //fetch user role by user id
+  async getUserRoleById(id: string) {
+    const user = await this.userRepo.findOne({
+      where: { id },
+      relations: ['role'],
+    });
+    if (!user) throw new NotFoundException('User not found');
+    const roleNameEncrypted = this.encryptionService.encrypt(user.role.name);
+    user.role.name = roleNameEncrypted; // Encrypt the role name before returning
+    return user.role;
   }
 
   async updateMembership(id: string, membership: string) {
