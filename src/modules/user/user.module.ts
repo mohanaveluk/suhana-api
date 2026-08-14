@@ -17,6 +17,7 @@ import { EmailModule } from 'src/shared/email/email.module';
 import { SmsModule } from 'src/shared/sms/sms.module';
 import { LogModule } from '../logger/log.module';
 import { AuditModule } from '../audit/audit.module';
+import { EncryptionService } from 'src/shared/services/encryption.service';
 
 @Module({
 
@@ -34,7 +35,7 @@ import { AuditModule } from '../audit/audit.module';
     MobileVerificationController,       // /users/mobile              — authenticated member OTP flow
     AdminMobileVerificationController,  // /admin/mobile-verification — admin audit history
   ],
-  providers: [UserRepository, UserService, ClinicContext, MobileVerificationService],
+  providers: [UserRepository, UserService, ClinicContext, MobileVerificationService, EncryptionService],
   exports: [UserService, MobileVerificationService],
 })
 export class UserModule {}

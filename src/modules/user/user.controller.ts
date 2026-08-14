@@ -39,8 +39,20 @@ export class UserController {
         return this.userService.findAll();
     }
 
+    //fetch user role by user id
+    @Get('role')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'Get user role by ID' })
+    @ApiResponse({ status: 200, description: 'User role found' })
+    @ApiResponse({ status: 404, description: 'User or role not found' })
+    getUserRoleById(@Request() req: any) {
+        return this.userService.getUserRoleById(req.user.id);
+    }
+
     @Get(':id')
     @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
     @ApiOperation({ summary: 'Get user by ID' })
     @ApiResponse({ status: 200, description: 'User found' })
     @ApiResponse({ status: 404, description: 'User not found' })
@@ -58,6 +70,7 @@ export class UserController {
 
     @Patch(':id/membership')
     @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
     @ApiOperation({ summary: 'Update user membership tier' })
     updateMembership(@Param('id') id: string, @Body('membership') membership: string) {
         return this.userService.updateMembership(id, membership);
@@ -65,6 +78,7 @@ export class UserController {
 
     @Patch(':id/role')
     @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
     @ApiOperation({ summary: 'Update user role' })
     updateRole(@Param('id') id: string, @Body('role') role: string) {
         return this.userService.updateRole(id, role);
@@ -72,6 +86,7 @@ export class UserController {
 
     @Delete(':id')
     @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
     @ApiOperation({ summary: 'Delete a user' })
     @ApiResponse({ status: 200, description: 'User deleted' })
     deleteUser(@Param('id') id: string) {
@@ -80,7 +95,7 @@ export class UserController {
 
     @Post('heartbeat')
     @UseGuards(JwtAuthGuard)
-    
+    @ApiBearerAuth('JWT-auth')
     @ApiOperation({ summary: 'Update presence — call every 2 minutes while app is open' })
     @ApiResponse({ status: 201, description: 'Presence updated' })
     heartbeat(@Request() req: any) {
@@ -89,6 +104,7 @@ export class UserController {
 
     @Get(':id/status')
     @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
     @ApiOperation({ summary: 'Get user online status' })
     @ApiResponse({ status: 200, description: 'User online status' })
     getStatus(@Param('id') id: string) {
@@ -97,6 +113,7 @@ export class UserController {
 
     @Get(':id/phone')
     @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
     @ApiOperation({ summary: 'Reveal phone number (premium feature)' })
     @ApiResponse({ status: 200, description: 'User phone number' })
     getPhone(@Param('id') id: string, @Request() req: any) {
