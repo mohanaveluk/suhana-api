@@ -162,6 +162,14 @@ export class ProfilesController {
     return this.profilesService.shareProfile(req.user.id, dto, domain);
   }
 
+  @Post('gshare')
+  @ApiOperation({ summary: 'Share a profile link via email by a guest user' })
+  @ApiResponse({ status: 201, description: 'Profile shared successfully', schema: { example: { message: 'Profile shared successfully' } } })
+  shareProfileBySystem(@Request() req: any, @Body() dto: ShareProfileDto) {
+    const domain = req.get('origin') ?? req.get('host') ?? '';
+    return this.profilesService.shareProfileByGuest('system', dto, domain);
+  }
+
   @Post('me/photos')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')

@@ -125,7 +125,7 @@ export class ProfilesService {
     });    
 
     return {
-      profiles: data.map((p) => this.toProfileResponse(p)),
+      profiles: search.isAuthenticated === 'true' ? data.map((p) => this.toProfileResponse(p)) : data.map((p) => this.toUAProfileResponse(p)),
       total,
       page,
       limit,
@@ -447,6 +447,23 @@ export class ProfilesService {
     return { message: 'Profile shared successfully' };
   }
 
+async shareProfileByGuest(userId: string, dto: ShareProfileDto, domain: string): Promise<{ message: string }> {
+
+    const senderName = userId;
+    const subject = dto.subject ?? `${senderName} wants to share a profile with you on Suhana Matrimony`;
+    const html = shareProfileEmailTemplate({
+      senderName,
+      receiverName: dto.receiverName,
+      profileUrl: dto.shareUrl,
+      subject: dto.subject,
+      body: dto.body,
+      domain,
+    });
+
+    await this.emailService.sendEmail({ to: dto.toEmail, subject, html });
+    return { message: 'Profile shared successfully' };
+  }
+
   async deletePhoto(userId: string, photoId: string) {
     const result = await this.photoRepo.delete(photoId);
     if (result.affected === 0) throw new NotFoundException('Photo not found');
@@ -552,6 +569,13 @@ export class ProfilesService {
     };
   }
 
+  // Masks sensitive information in the email address.
+  private mask(email: string): string {
+    if (!email || email.length < 6) return '***';
+    const [localPart, domain] = email.split('@');
+    return `${localPart.slice(0, 3)}*****@${domain}`;
+  }
+
   private toUserProfileResponse(user: User) {
     const userDetail = {
       id: user.id,
@@ -578,6 +602,7 @@ export class ProfilesService {
   private toProfileResponse(profile: Profile) {
     if (profile?.user) {
       profile.user.mobile = '**********';
+      profile.user.password = '**********';
     }
     return {
       user: profile.user,
@@ -641,4 +666,88 @@ export class ProfilesService {
       })),
     };
   }
+
+//response for unauthenticated users, hide sensitive information like email, mobile, password  
+private toUAProfileResponse(profile: Profile) {
+    if (profile?.user) {
+      profile.user.mobile = '**********';
+      profile.user.password = '**********';
+      profile.user.email = this.mask(profile.user.email);
+    }
+    return {
+      user: {
+        id: profile.user.id,
+        first_name: profile.user.first_name,
+        last_name: profile.user.last_name,
+        email: profile.user.email,
+        mobile: profile.user.mobile,
+        gender: profile.user.gender,
+        membership: profile.user.membership,
+        is_email_verified: profile.user.is_email_verified,
+        isMobileVerified: profile.user.isMobileVerified === 1,
+        is_verified: profile.user.is_verified,
+        profile_image: profile.user.profile_image,
+        last_active: profile.user.last_active,
+        temp_guid: profile.user.temp_guid,
+      },
+      userId: profile.id,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      age: profile.age,
+      dateOfBirth: profile.dateOfBirth,
+      gender: profile.gender,
+      religion: profile.religion,
+      caste: profile.caste,
+      motherTongue: profile.motherTongue,
+      maritalStatus: profile.maritalStatus ?? null,
+      height: profile.height,
+      weight: profile.weight,
+      complexion: profile.complexion,
+      // aboutMe: profile.aboutMe,
+      // interests: profile.interests,
+      // photoPrivacy: profile.photoPrivacy,
+      status: profile.status,
+      profileCompleteness: profile.profileCompleteness,
+      videoIntroUrl: profile.videoIntroUrl,
+      voiceIntroductionUrl: profile.voiceIntroductionUrl ?? null,
+      profileCode: profile.profileCode,
+      //isMobileVerified: profile.user.isMobileVerified === 1,
+      location: {
+        city: profile.city,
+        state: profile.state,
+        country: profile.country,
+        willingToRelocate: profile.willingToRelocate,
+      },
+      education: {
+        level: profile.educationLevel,
+        field: profile.educationField,
+        institution: profile.institution,
+      },
+      occupation: {
+        title: profile.occupationTitle,
+        company: profile.company,
+        annualIncome: profile.annualIncome,
+        workingStatus: profile.workingStatus,
+      },
+      // familyDetails: {
+      //   familyType: profile.familyType,
+      //   fatherOccupation: profile.fatherOccupation,
+      //   motherOccupation: profile.motherOccupation,
+      //   siblings: profile.siblings,
+      //   familyValues: profile.familyValues,
+      //   familyPreferenceNote: profile.familyPreferenceNote,
+      // },
+      // preferences: profile.preferences,
+      // horoscope: profile.horoscope,
+      // horoscopeDocUrl: profile.horoscopeDocUrl,
+      photos: (profile.photos || []).map((ph) => ({
+        id: ph.id,
+        url: ph.url,
+        variants: ph.variants,
+        createdAt: ph.createdAt,
+        isPrimary: ph.isPrimary,
+        isVerified: ph.isVerified,
+      })),
+    };
+  }  
 }

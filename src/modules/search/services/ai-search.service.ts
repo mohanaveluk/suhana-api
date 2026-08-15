@@ -408,6 +408,7 @@ export class AiSearchService {
     const primary = p.photos?.find((ph) => ph.isPrimary) ?? p.photos?.[0];
     if (p.user) {
       p.user.mobile = '**********';
+      p.user.password = '**********';
     }
 
     return {
