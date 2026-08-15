@@ -318,6 +318,11 @@ export class SearchProfilesDto {
   @ApiPropertyOptional({ example: 12, description: 'Items per page' })
   @IsOptional() @IsNumber() @Type(() => Number) @Min(1) @Max(50)
   limit?: number;
+
+  @ApiPropertyOptional({ example: 'true', description: 'Filter by authenticated profiles only' })
+  @IsOptional() @IsString()
+  isAuthenticated: string;
+
 }
 
 export class ProfileResponseDto {
