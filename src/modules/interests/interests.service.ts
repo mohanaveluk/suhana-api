@@ -108,7 +108,7 @@ export class InterestsService {
     await this.emailService.sendEmail({
       to: recipient.email,
       cc: "gcpstudy0@gmail.com",
-      subject: `${sender.first_name} is interested in your profile – Suhana Matrimony`,
+      subject: `${sender.first_name} is interested in your profile – Aurora Matrimony`,
       html: interestRequestEmailTemplate({
         recipientFirstName: recipient.first_name,
         senderFirstName: sender.first_name,

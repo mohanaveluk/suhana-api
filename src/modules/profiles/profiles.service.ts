@@ -432,8 +432,8 @@ export class ProfilesService {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
-    const senderName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'A Suhana member';
-    const subject = dto.subject ?? `${senderName} wants to share a profile with you on Suhana Matrimony`;
+    const senderName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'A Aurora member';
+    const subject = dto.subject ?? `${senderName} wants to share a profile with you on Aurora Matrimony`;
     const html = shareProfileEmailTemplate({
       senderName,
       receiverName: dto.receiverName,
@@ -450,7 +450,7 @@ export class ProfilesService {
 async shareProfileByGuest(userId: string, dto: ShareProfileDto, domain: string): Promise<{ message: string }> {
 
     const senderName = userId;
-    const subject = dto.subject ?? `${senderName} wants to share a profile with you on Suhana Matrimony`;
+    const subject = dto.subject ?? `${senderName} wants to share a profile with you on Aurora Matrimony`;
     const html = shareProfileEmailTemplate({
       senderName,
       receiverName: dto.receiverName,
@@ -729,15 +729,15 @@ private toUAProfileResponse(profile: Profile) {
         annualIncome: profile.annualIncome,
         workingStatus: profile.workingStatus,
       },
-      // familyDetails: {
-      //   familyType: profile.familyType,
+      familyDetails: {
+        familyType: profile.familyType,
       //   fatherOccupation: profile.fatherOccupation,
       //   motherOccupation: profile.motherOccupation,
       //   siblings: profile.siblings,
       //   familyValues: profile.familyValues,
       //   familyPreferenceNote: profile.familyPreferenceNote,
-      // },
-      // preferences: profile.preferences,
+      },
+      preferences: profile.preferences,
       // horoscope: profile.horoscope,
       // horoscopeDocUrl: profile.horoscopeDocUrl,
       photos: (profile.photos || []).map((ph) => ({

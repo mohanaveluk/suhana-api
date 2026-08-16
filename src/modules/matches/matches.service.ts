@@ -450,7 +450,7 @@ export class MatchesService {
 Analyze the horoscope details provided and return ONLY a single valid JSON object — no markdown, no commentary, no text outside the JSON.
 Use balanced, constructive language. Avoid fear-based predictions. All scores must be integers.`;
 
-    const userPrompt = `Act as a Vedic Astrology Expert for Suhana Matrimony.
+    const userPrompt = `Act as a Vedic Astrology Expert for Aurora Matrimony.
 
 Perform a full 11-feature horoscope compatibility analysis for the two individuals below and return the result as a single JSON object matching the exact structure provided.
 

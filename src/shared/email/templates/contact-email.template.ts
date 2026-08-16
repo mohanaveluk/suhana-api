@@ -79,7 +79,7 @@ function shell(bodyContent: string): string {
         <td align="center"
             style="font-family:Arial,Helvetica,sans-serif;font-size:12px;
                    color:#9b7578;line-height:1.8;padding:0 16px;">
-          &copy; ${year} Suhana Matrimony. All rights reserved.<br>
+          &copy; ${year} Aurora Matrimony. All rights reserved.<br>
           <span style="color:#b76e79;">Where hearts find their home.</span><br><br>
           This email was sent because a contact form was submitted on our website.
         </td>
@@ -138,7 +138,7 @@ function headerBanner(subtitle: string): string {
                     
           <div style="font-family:Georgia,'Times New Roman',serif;font-size:28px;font-weight:700;
                       color:#ffffff;letter-spacing:2px;margin-bottom:6px;">
-            Suhana Matrimony
+            Aurora Matrimony
           </div>
           <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;
                       color:rgba(255,255,255,0.8);letter-spacing:1.5px;text-transform:uppercase;">
@@ -171,9 +171,9 @@ function cardFooter(): string {
           Where hearts find their home.
         </td>
         <td align="right" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;">
-          <a href="mailto:contact@suhanamatrimony.com"
+          <a href="mailto:contact@auroramatrimony.com"
              style="color:#e8d5a0;text-decoration:none;">
-            contact@suhanamatrimony.com
+            contact@auroramatrimony.com
           </a>
         </td>
       </tr>
@@ -182,11 +182,11 @@ function cardFooter(): string {
           <div style="height:1px;background:rgba(255,255,255,0.15);margin-bottom:10px;"></div>
           <p style="font-family:Arial,Helvetica,sans-serif;font-size:11px;
                     color:rgba(255,255,255,0.55);text-align:center;margin:0;">
-            &copy; ${year} Suhana Matrimony &nbsp;&bull;&nbsp;
-            <a href="https://www.suhanamatrimony.com/privacy"
+            &copy; ${year} Aurora Matrimony &nbsp;&bull;&nbsp;
+            <a href="https://www.auroramatrimony.com/privacy"
                style="color:rgba(255,255,255,0.55);text-decoration:underline;">Privacy Policy</a>
             &nbsp;&bull;&nbsp;
-            <a href="https://www.suhanamatrimony.com"
+            <a href="https://www.auroramatrimony.com"
                style="color:rgba(255,255,255,0.55);text-decoration:underline;">Visit Website</a>
           </p>
         </td>
@@ -231,7 +231,7 @@ ${headerBanner('Thank You for Reaching Out')}
     <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#3d2c2e;
               line-height:1.8;margin:0 0 16px;">
       Thank you for contacting
-      <strong style="color:#a20000;">Suhana Matrimony</strong>.
+      <strong style="color:#a20000;">Aurora Matrimony</strong>.
       We are truly delighted that you chose to reach out to us, and we want you to know
       that your message is in safe hands.
     </p>
@@ -418,7 +418,7 @@ ${headerBanner('Thank You for Reaching Out')}
     </p>
     <p style="font-family:Georgia,'Times New Roman',serif;font-size:17px;
               font-weight:700;color:#a20000;margin:0 0 3px;">
-      The Suhana Matrimony Team
+      The Aurora Matrimony Team
     </p>
     <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;
               color:#b76e79;margin:0;">
@@ -508,7 +508,7 @@ ${headerBanner('New Contact Form Submission')}
                 border-radius:2px;margin-bottom:18px;"></div>
     <p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;
               color:#6b5557;margin:0 0 22px;line-height:1.7;">
-      A visitor has submitted the contact form on the Suhana Matrimony website.
+      A visitor has submitted the contact form on the Aurora Matrimony website.
       Full details are below. Please respond within
       <strong style="color:#a20000;">24&nbsp;hours</strong>.
     </p>

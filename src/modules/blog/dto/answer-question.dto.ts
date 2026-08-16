@@ -22,7 +22,7 @@ export class AnswerQuestionDto {
   @IsOptional() @IsBoolean()
   promoteToPublic?: boolean;
  
-  @ApiPropertyOptional({ example: 'suhana' })
+  @ApiPropertyOptional({ example: 'aurora' })
   @IsOptional() @IsIn(CATEGORIES)
   category?: string;
 }

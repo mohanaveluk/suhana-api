@@ -6,7 +6,7 @@ export function shareProfileEmailTemplate1(params: {
   body?: string;
   domain: string;
 }): string {
-  const defaultSubject = `${params.senderName} thinks you might like this profile on Suhana Matrimony`;
+  const defaultSubject = `${params.senderName} thinks you might like this profile on Aurora Matrimony`;
   const personalMessage = params.body
     ? `<div style="background:#f5f3ff;border-left:4px solid #8B5CF6;padding:16px;border-radius:4px;margin:20px 0;">
         <p style="margin:0;color:#555;font-size:14px;font-style:italic;">"${params.body}"</p>
@@ -27,7 +27,7 @@ export function shareProfileEmailTemplate1(params: {
         <div style="padding:28px;">
           <p style="color:#444;font-size:15px;">Dear ${params.receiverName},</p>
           <p style="color:#444;font-size:15px;">
-            <strong>${params.senderName}</strong> found a profile on <strong>Suhana Matrimony</strong> and thought you might be interested.
+            <strong>${params.senderName}</strong> found a profile on <strong>Aurora Matrimony</strong> and thought you might be interested.
           </p>
 
           ${personalMessage}
@@ -45,12 +45,12 @@ export function shareProfileEmailTemplate1(params: {
           </p>
 
           <hr style="border:none;border-top:1px solid #f0f0f0;margin:24px 0;">
-          <p style="color:#444;font-size:15px;">Warm regards,<br><strong>The Suhana Matrimony Team</strong></p>
+          <p style="color:#444;font-size:15px;">Warm regards,<br><strong>The Aurora Matrimony Team</strong></p>
         </div>
 
         <div style="background:#f3f4f6;padding:16px;text-align:center;">
           <p style="color:#9ca3af;font-size:12px;margin:0;">
-            © Suhana Matrimony &nbsp;·&nbsp;
+            © Aurora Matrimony &nbsp;·&nbsp;
             <a href="${params.domain}" style="color:#9ca3af;">${params.domain}</a>
           </p>
         </div>

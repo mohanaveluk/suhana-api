@@ -47,17 +47,17 @@ export class MatchFixedService {
       );
     }
 
-    if (dto.matchSourceType === MatchSourceType.SUHANA && dto.matchedUserId) {
+    if ((dto.matchSourceType === MatchSourceType.SUHANA || dto.matchSourceType === MatchSourceType.AURORA) && dto.matchedUserId) {
       const matchedUser = await this.userRepo.findOne({ where: { id: dto.matchedUserId } });
       if (!matchedUser) {
-        throw new NotFoundException('The matched user was not found on Suhana');
+        throw new NotFoundException('The matched user was not found on Aurora Matrimony');
       }
     }
 
     const matchFixed = this.matchFixedRepo.create({
       ...dto,
       userId,
-      isMatchFromSuhana: dto.matchSourceType === MatchSourceType.SUHANA,
+      isMatchFromSuhana: (dto.matchSourceType === MatchSourceType.SUHANA || dto.matchSourceType === MatchSourceType.AURORA),
       createdBy: userId,
       updatedBy: userId,
     });
@@ -117,8 +117,8 @@ export class MatchFixedService {
 
     if (!record.matchedUserId) {
       throw new BadRequestException(
-        'This match has no linked Suhana partner, so it cannot be confirmed by a partner. ' +
-          'Contact Suhana support to request admin verification.',
+        'This match has no linked Aurora partner, so it cannot be confirmed by a partner. ' +
+          'Contact Aurora support to request admin verification.',
       );
     }
     if (record.matchedUserId !== userId) {

@@ -1,5 +1,6 @@
 export enum MatchSourceType {
   SUHANA = 'SUHANA',
+  AURORA = 'AURORA',
   FAMILY = 'FAMILY',
   RELATIVE = 'RELATIVE',
   FRIEND = 'FRIEND',

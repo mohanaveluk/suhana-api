@@ -66,13 +66,13 @@ export class FeedbackService {
       updatedBy: userId,
     });
     
-    const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'support@suhana.com';
-    const CC_EMAIL = process.env.CC_EMAIL || 'support@suhana.com';
+    const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'support@auroramatrimony.com';
+    const CC_EMAIL = process.env.CC_EMAIL || 'support@auroramatrimony.com';
 
     this.sendEmailsSilently([
       this.emailService.sendEmail({
         to: ADMIN_EMAIL,
-        subject: `[Suhana] New Feedback: ${dto.subject}`,
+        subject: `[Aurora] New Feedback: ${dto.subject}`,
         html: feedbackAdminNotificationTemplate({
           submitterName: `${submitter.first_name} ${submitter.last_name ?? ''}`.trim(),
           submitterEmail: submitter.email,
@@ -91,7 +91,7 @@ export class FeedbackService {
       this.emailService.sendEmail({
         to: submitter.email,
         cc: CC_EMAIL,
-        subject: 'Thank You For Your Feedback — Suhana Matrimony',
+        subject: 'Thank You For Your Feedback — Aurora Matrimony',
         html: feedbackThankYouTemplate({
           userName: submitter.first_name,
           category: dto.category,
@@ -154,7 +154,7 @@ export class FeedbackService {
     this.sendEmailsSilently([
       this.emailService.sendEmail({
         to: submitter.email,
-        subject: 'Thank You For Your Feedback — Suhana Matrimony',
+        subject: 'Thank You For Your Feedback — Aurora Matrimony',
         html: feedbackThankYouTemplate({
           userName: submitter.first_name,
           subject: dto.subject,
@@ -167,7 +167,7 @@ export class FeedbackService {
       }),
       this.emailService.sendEmail({
         to: targetUser.email,
-        subject: 'New Feedback Received On Your Profile — Suhana Matrimony',
+        subject: 'New Feedback Received On Your Profile — Aurora Matrimony',
         html: profileFeedbackNotificationTemplate({
           targetName: targetUser.first_name,
           reviewerName: submitterName,
@@ -298,7 +298,7 @@ export class FeedbackService {
         this.sendEmailsSilently([
           this.emailService.sendEmail({
             to: submitter.email,
-            subject: 'Response To Your Feedback — Suhana Matrimony',
+            subject: 'Response To Your Feedback — Aurora Matrimony',
             html: feedbackReplyTemplate({
               userName: submitter.first_name,
               repliedBy: replier ? `${replier.first_name} ${replier.last_name ?? ''}`.trim() : 'Suhana Support',

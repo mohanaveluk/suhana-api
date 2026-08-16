@@ -191,7 +191,7 @@ export const voteOtpEmailTemplate = (params: {
                     </table>
 
                     <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.5;">
-                      Enter this code in the verification dialog on the suhana page
+                      Enter this code in the verification dialog on the Aurora page
                     </p>
                   </td>
                 </tr>
@@ -273,7 +273,7 @@ export const voteOtpEmailTemplate = (params: {
                        padding:24px 40px;text-align:center;">
               <p style="margin:0 0 6px;font-size:13px;color:#888;line-height:1.6;">
                 This email was sent by <strong style="color:#4f46e5;">Voter-Pulse</strong>
-                on behalf of the suhana organiser.
+                on behalf of the Aurora organiser.
                 Questions? Contact our
                 <a href="mailto:support@${domain}"
                    style="color:#4f46e5;text-decoration:none;font-weight:600;">support team</a>.
@@ -316,7 +316,7 @@ export const buildOtpEmailHtml1 = (otp: string, firstName: string): string => {
   <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-    <title>Password Reset Code – Suhana Matrimony</title>
+    <title>Password Reset Code – Aurora Matrimony</title>
   </head>
   <body style="margin:0;padding:0;background:#f5f3ff;
               font-family:'Segoe UI',Arial,sans-serif;">
@@ -348,7 +348,7 @@ export const buildOtpEmailHtml1 = (otp: string, firstName: string): string => {
             <td style="padding:40px 40px 32px;">
               <p style="margin:0 0 24px;font-size:15px;color:#444;line-height:1.7;">
                 Hi <strong>${firstName}</strong>,<br/><br/>
-                We received a request to reset the password for your Suhana Matrimony account.
+                We received a request to reset the password for your Aurora Matrimony account.
                 Use the code below — it is valid for <strong>5 minutes</strong>.
               </p>
   
@@ -427,7 +427,7 @@ export const buildOtpEmailHtml1 = (otp: string, firstName: string): string => {
                 Sent by <strong style="color:#4f46e5;">Suhana Matrimony</strong>
               </p>
               <p style="margin:0;font-size:11px;color:#bbb;">
-                © ${year} Suhana Matrimony. All rights reserved.
+                © ${year} Aurora Matrimony. All rights reserved.
               </p>
             </td>
           </tr>
@@ -464,7 +464,7 @@ export const buildOtpEmailHtml = (otp: string, firstName: string): string => {
   <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-    <title>Password Reset Code – Suhana Matrimony</title>
+    <title>Password Reset Code – Aurora Matrimony</title>
   </head>
   <body style="margin:0;padding:0;background:#fde8e8;
               font-family:'Segoe UI',Arial,sans-serif;">
@@ -583,7 +583,7 @@ export const buildOtpEmailHtml = (otp: string, firstName: string): string => {
                 Sent by <strong style="color:#a20000;">Suhana Matrimony</strong>
               </p>
               <p style="margin:0;font-size:11px;color:#d4a0a7;font-family:Arial,Helvetica,sans-serif;">
-                © ${year} Suhana Matrimony. All rights reserved.
+                © ${year} Aurora Matrimony. All rights reserved.
               </p>
             </td>
           </tr>
@@ -665,7 +665,7 @@ export const loginOtpEmailTemplate = (params: {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>Your sign-in code – Suhana Matrimony</title>
+  <title>Your sign-in code – Aurora Matrimony</title>
 </head>
 <body style="margin:0;padding:0;background-color:${C.blush};
              font-family:${C.fontname}">
@@ -713,7 +713,7 @@ export const loginOtpEmailTemplate = (params: {
                     </h1>
                     <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.82);
                               line-height:1.5;">
-                      Use this code to complete your login to Suhana Matrimony
+                      Use this code to complete your login to Aurora Matrimony
                     </p>
 
                     <!-- Gold "Secure Login" badge — same style across all templates -->
@@ -748,7 +748,7 @@ export const loginOtpEmailTemplate = (params: {
               <p style="margin:0 0 28px;font-family:Arial,Helvetica,sans-serif;
                         font-size:15px;color:${C.textPrimary};line-height:1.8;">
                 We received a sign-in request for your
-                <strong style="color:${C.maroon};">Suhana Matrimony</strong>
+                <strong style="color:${C.maroon};">Aurora Matrimony</strong>
                 account associated with
                 <strong>${email}</strong>.
                 Enter the 6-digit code below to complete your login.
@@ -774,7 +774,7 @@ export const loginOtpEmailTemplate = (params: {
 
                     <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
                               font-size:12px;color:${C.textSecondary};line-height:1.5;">
-                      Enter this code on the Suhana Matrimony sign-in page
+                      Enter this code on the Aurora Matrimony sign-in page
                     </p>
                   </td>
                 </tr>
@@ -850,7 +850,7 @@ export const loginOtpEmailTemplate = (params: {
                     <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
                               font-size:13px;color:${C.textSecondary};line-height:1.6;">
                       <strong style="color:${C.maroon};">Never share this code.</strong>
-                      The Suhana Matrimony team will <em>never</em> ask for your sign-in
+                      The Aurora Matrimony team will <em>never</em> ask for your sign-in
                       code by phone, email, or chat. Keep it confidential.
                     </p>
                   </td>
@@ -870,7 +870,7 @@ export const loginOtpEmailTemplate = (params: {
                         font-size:15px;color:${C.textPrimary};">Warm regards,</p>
               <p style="margin:0 0 2px;font-family:${C.fontname}
                         font-size:16px;font-weight:700;color:${C.maroon};">
-                The Suhana Matrimony Team
+                The Aurora Matrimony Team
               </p>
               <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
                         font-size:12px;color:${C.roseGold};">
@@ -898,7 +898,7 @@ export const loginOtpEmailTemplate = (params: {
               </p>
               <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
                         font-size:11px;color:${C.roseGoldLight};">
-                © ${year} Suhana Matrimony. All rights reserved.
+                © ${year} Aurora Matrimony. All rights reserved.
               </p>
             </td>
           </tr>
