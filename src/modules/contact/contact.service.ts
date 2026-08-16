@@ -26,7 +26,7 @@ export class ContactService {
     // Send email notification to admin
     try {
 
-      createContactDto.subject = 'We received your message – Suhana Matrimony';
+      createContactDto.subject = 'We received your message – Aurora Matrimony';
       await this.emailService.sendEmail({
         to:      createContactDto.email,
         subject: createContactDto.subject,

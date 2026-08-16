@@ -5,11 +5,11 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
  
-const CATEGORIES = ['guide','vote','party','suhana','tips','news'] as const;
+const CATEGORIES = ['guide','vote','party','suhana', 'aurora', 'tips','news'] as const;
 type Category = typeof CATEGORIES[number];
  
 export class CreatePostDto {
-  @ApiProperty({ description: 'Blog post title', example: 'How to Create Your First Election suhana' })
+  @ApiProperty({ description: 'Blog post title', example: 'How to Create Your First Election aurora' })
   @IsString() @IsNotEmpty() @MaxLength(300)
   title: string;
  

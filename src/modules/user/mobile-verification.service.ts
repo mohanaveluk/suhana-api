@@ -341,7 +341,7 @@ export class MobileVerificationService {
       to: mobileNumber,
       smsType: 'MOBILE_VERIFICATION',
       body:
-        `Your Suhana Matrimony verification code is ${code}.\n\n` +
+        `Your Aurora Matrimony verification code is ${code}.\n\n` +
         `This code expires in ${MobileVerificationService.OTP_TTL_MINUTES} minutes.\n` +
         `Do not share this code with anyone.`,
     });
@@ -353,7 +353,7 @@ export class MobileVerificationService {
       smsType: 'MOBILE_VERIFIED',
       body:
         'Your mobile number has been verified successfully.\n\n' +
-        'Thank you for verifying your account with Suhana Matrimony.',
+        'Thank you for verifying your account with Aurora Matrimony.',
     });
   }
 

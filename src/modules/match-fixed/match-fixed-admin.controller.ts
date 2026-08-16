@@ -23,7 +23,7 @@ export class MatchFixedAdminController {
   @ApiOperation({
     summary: 'Match Fixed admin dashboard metrics',
     description:
-      'Returns platform-wide aggregated statistics for admin use: total matches, Suhana vs external, ' +
+      'Returns platform-wide aggregated statistics for admin use: total matches, Aurora vs external, ' +
       'engaged, married, verified stories, and success rate percentage.',
   })
   @ApiResponse({

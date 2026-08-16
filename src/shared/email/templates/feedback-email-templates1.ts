@@ -18,7 +18,7 @@ export function feedbackAdminNotificationTemplate1(params: {
   return `
     <!DOCTYPE html>
     <html>
-    <head><meta charset="UTF-8"><title>New Feedback — Suhana Matrimony</title></head>
+    <head><meta charset="UTF-8"><title>New Feedback — Aurora Matrimony</title></head>
     <body style="font-family: Arial, sans-serif; background: #f9f9f9; padding: 20px;">
       <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <div style="background: #8B5CF6; padding: 24px; text-align: center;">
@@ -26,7 +26,7 @@ export function feedbackAdminNotificationTemplate1(params: {
         </div>
         <div style="padding: 28px;">
           <p style="color: #444; font-size: 15px;">Hello ${params.adminName ?? 'Admin'},</p>
-          <p style="color: #444; font-size: 15px;">A new feedback has been submitted on <strong>Suhana Matrimony</strong>.</p>
+          <p style="color: #444; font-size: 15px;">A new feedback has been submitted on <strong>Aurora Matrimony</strong>.</p>
 
           <table style="width:100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;">
             <tr style="background: #f3f4f6;">
@@ -58,7 +58,7 @@ export function feedbackAdminNotificationTemplate1(params: {
           <p style="color: #888; font-size: 13px;">Please log in to the admin panel to review and take action on this feedback.</p>
         </div>
         <div style="background: #f3f4f6; padding: 16px; text-align: center;">
-          <p style="color: #9ca3af; font-size: 12px; margin: 0;">© Suhana Matrimony · This is an automated notification</p>
+          <p style="color: #9ca3af; font-size: 12px; margin: 0;">© Aurora Matrimony · This is an automated notification</p>
         </div>
       </div>
     </body>
@@ -76,7 +76,7 @@ export function feedbackThankYouTemplate1(params: {
   return `
     <!DOCTYPE html>
     <html>
-    <head><meta charset="UTF-8"><title>Thank You — Suhana Matrimony</title></head>
+    <head><meta charset="UTF-8"><title>Thank You — Aurora Matrimony</title></head>
     <body style="font-family: Arial, sans-serif; background: #f9f9f9; padding: 20px;">
       <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <div style="background: #8B5CF6; padding: 24px; text-align: center;">
@@ -86,7 +86,7 @@ export function feedbackThankYouTemplate1(params: {
           <p style="color: #444; font-size: 15px;">Dear ${params.userName},</p>
           <p style="color: #444; font-size: 15px;">
             Thank you for taking the time to share your feedback with us. Your voice helps us build a better
-            experience for everyone on <strong>Suhana Matrimony</strong>.
+            experience for everyone on <strong>Aurora Matrimony</strong>.
           </p>
           <div style="background: #f5f3ff; border-left: 4px solid #8B5CF6; padding: 16px; border-radius: 4px; margin: 20px 0;">
             <p style="margin: 0; color: #555; font-size: 14px;"><strong>Subject:</strong> ${params.subject}</p>
@@ -96,10 +96,10 @@ export function feedbackThankYouTemplate1(params: {
             We have received your feedback and our team will review it shortly. If your feedback requires a
             response, we will get back to you as soon as possible.
           </p>
-          <p style="color: #444; font-size: 15px;">Warm regards,<br><strong>The Suhana Matrimony Team</strong></p>
+          <p style="color: #444; font-size: 15px;">Warm regards,<br><strong>The Aurora Matrimony Team</strong></p>
         </div>
         <div style="background: #f3f4f6; padding: 16px; text-align: center;">
-          <p style="color: #9ca3af; font-size: 12px; margin: 0;">© Suhana Matrimony · You received this because you submitted feedback</p>
+          <p style="color: #9ca3af; font-size: 12px; margin: 0;">© Aurora Matrimony · You received this because you submitted feedback</p>
         </div>
       </div>
     </body>
@@ -117,11 +117,11 @@ export function profileFeedbackNotificationTemplate1(params: {
   subject: string;
   loginUrl?: string;
 }): string {
-  const reviewerDisplay = params.isAnonymous ? 'a Suhana member' : params.reviewerName;
+  const reviewerDisplay = params.isAnonymous ? 'a Aurora member' : params.reviewerName;
   return `
     <!DOCTYPE html>
     <html>
-    <head><meta charset="UTF-8"><title>New Profile Feedback — Suhana Matrimony</title></head>
+    <head><meta charset="UTF-8"><title>New Profile Feedback — Aurora Matrimony</title></head>
     <body style="font-family: Arial, sans-serif; background: #f9f9f9; padding: 20px;">
       <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <div style="background: #8B5CF6; padding: 24px; text-align: center;">
@@ -130,7 +130,7 @@ export function profileFeedbackNotificationTemplate1(params: {
         <div style="padding: 28px;">
           <p style="color: #444; font-size: 15px;">Dear ${params.targetName},</p>
           <p style="color: #444; font-size: 15px;">
-            You have received new feedback from <strong>${reviewerDisplay}</strong> on your Suhana Matrimony profile.
+            You have received new feedback from <strong>${reviewerDisplay}</strong> on your Aurora Matrimony profile.
           </p>
           <div style="background: #f5f3ff; border-left: 4px solid #8B5CF6; padding: 16px; border-radius: 4px; margin: 20px 0;">
             <p style="margin: 0; color: #555; font-size: 14px;"><strong>Type:</strong> ${params.category.replace(/_/g, ' ')}</p>
@@ -144,10 +144,10 @@ export function profileFeedbackNotificationTemplate1(params: {
           <div style="text-align: center; margin: 24px 0;">
             <a href="${params.loginUrl}" style="background: #8B5CF6; color: #ffffff; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 15px;">View My Profile</a>
           </div>` : ''}
-          <p style="color: #444; font-size: 15px;">Warm regards,<br><strong>The Suhana Matrimony Team</strong></p>
+          <p style="color: #444; font-size: 15px;">Warm regards,<br><strong>The Aurora Matrimony Team</strong></p>
         </div>
         <div style="background: #f3f4f6; padding: 16px; text-align: center;">
-          <p style="color: #9ca3af; font-size: 12px; margin: 0;">© Suhana Matrimony</p>
+          <p style="color: #9ca3af; font-size: 12px; margin: 0;">© Aurora Matrimony</p>
         </div>
       </div>
     </body>
@@ -166,7 +166,7 @@ export function feedbackReplyTemplate1(params: {
   return `
     <!DOCTYPE html>
     <html>
-    <head><meta charset="UTF-8"><title>Response To Your Feedback — Suhana Matrimony</title></head>
+    <head><meta charset="UTF-8"><title>Response To Your Feedback — Aurora Matrimony</title></head>
     <body style="font-family: Arial, sans-serif; background: #f9f9f9; padding: 20px;">
       <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <div style="background: #8B5CF6; padding: 24px; text-align: center;">
@@ -189,12 +189,12 @@ export function feedbackReplyTemplate1(params: {
           </div>
 
           <p style="color: #444; font-size: 15px;">
-            Thank you for helping us improve Suhana Matrimony. Your feedback is invaluable to us.
+            Thank you for helping us improve Aurora Matrimony. Your feedback is invaluable to us.
           </p>
-          <p style="color: #444; font-size: 15px;">Warm regards,<br><strong>${params.repliedBy}</strong><br>Suhana Matrimony Team</p>
+          <p style="color: #444; font-size: 15px;">Warm regards,<br><strong>${params.repliedBy}</strong><br>Aurora Matrimony Team</p>
         </div>
         <div style="background: #f3f4f6; padding: 16px; text-align: center;">
-          <p style="color: #9ca3af; font-size: 12px; margin: 0;">© Suhana Matrimony · Response to your submitted feedback</p>
+          <p style="color: #9ca3af; font-size: 12px; margin: 0;">© Aurora Matrimony · Response to your submitted feedback</p>
         </div>
       </div>
     </body>

@@ -117,7 +117,7 @@ export const suhanaShareEmailTemplate = (params: suhanaShareEmailParams): string
                     box-shadow:0 8px 40px rgba(79,70,229,0.14);overflow:hidden;">
 
         <!-- ════════════════════════════════
-             HEADER — Brand + suhana title
+             HEADER — Brand + Aurora title
         ════════════════════════════════ -->
         <tr>
           <td style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);
@@ -137,7 +137,7 @@ export const suhanaShareEmailTemplate = (params: suhanaShareEmailParams): string
               Voter-Pulse
             </div>
 
-            <!-- suhana title -->
+            <!-- Aurora title -->
             <h1 style="margin:0 0 10px;font-size:26px;font-weight:900;
                        color:#ffffff;letter-spacing:-0.4px;line-height:1.2;">
               ${suhanaTitle}
@@ -168,7 +168,7 @@ export const suhanaShareEmailTemplate = (params: suhanaShareEmailParams): string
             <p style="margin:0 0 ${customMessage ? '16px' : '28px'};
                       font-size:15px;color:#444;line-height:1.75;">
               <strong style="color:#1e1b4b;">${organizerName}</strong> has invited you
-              to participate in an election suhana.
+              to participate in an election Aurora.
               Your vote is completely confidential and takes less than a minute.
             </p>
 
@@ -217,7 +217,7 @@ export const suhanaShareEmailTemplate = (params: suhanaShareEmailParams): string
                            border-radius:12px;padding:14px 18px;text-align:center;">
                   <p style="margin:0 0 4px;font-size:11px;font-weight:700;
                              color:#9ca3af;text-transform:uppercase;letter-spacing:1px;">
-                    suhana Link
+                    aurora Link
                   </p>
                   <a href="${encodedUrl}"
                      style="font-size:14px;font-weight:700;color:#4f46e5;
@@ -283,7 +283,7 @@ export const suhanaShareEmailTemplate = (params: suhanaShareEmailParams): string
                     Spread the word
                   </p>
                   <p style="margin:0 0 18px;font-size:13px;color:#6b7280;">
-                    Share this suhana so more voices are heard
+                    Share this Aurora so more voices are heard
                   </p>
 
                   <!-- Social buttons row -->
@@ -406,7 +406,7 @@ export const suhanaShareEmailTemplate = (params: suhanaShareEmailParams): string
           <td style="background:#f7f8ff;border-top:1px solid #e5e7eb;
                      padding:22px 40px;text-align:center;">
             <p style="margin:0 0 6px;font-size:13px;color:#888;line-height:1.6;">
-              This suhana is powered by
+              This Aurora is powered by
               <strong style="color:#4f46e5;">Voter-Pulse</strong>.
               ${mediaName ? `Conducted in partnership with <strong>${mediaName}</strong>.` : ''}
             </p>

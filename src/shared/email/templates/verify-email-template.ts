@@ -192,7 +192,7 @@ export const verifyEmailTemplate = (
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>Verify your email – Suhana Matrimony</title>
+  <title>Verify your email – Aurora Matrimony</title>
 </head>
 <body style="margin:0;padding:0;background-color:${C.ivoryWarm};font-family:'Segoe UI',Arial,sans-serif;">
 
@@ -227,7 +227,7 @@ export const verifyEmailTemplate = (
             <td style="padding:44px 40px 36px;">
               <p style="margin:0 0 24px;font-size:15px;color:${C.textPrimary};line-height:1.7;">
                 Dear ${first_name},<br/><br/>
-                Thanks for signing up for <strong style="color:${C.maroon};">Suhana Matrimony</strong>.
+                Thanks for signing up for <strong style="color:${C.maroon};">Aurora Matrimony</strong>.
                 To activate your account, click the button below. This link is valid for
                 <strong>15&nbsp;minutes</strong>.
               </p>
@@ -318,12 +318,12 @@ export const verifyEmailTemplate = (
           <tr>
             <td style="background:${C.blush};border-top:1px solid ${C.roseGoldLighter};padding:24px 40px;text-align:center;">
               <p style="margin:0 0 6px;font-size:13px;color:${C.textSecondary};line-height:1.6;">
-                This email was sent by <strong style="color:${C.maroon};">Suhana Matrimony</strong>.
+                This email was sent by <strong style="color:${C.maroon};">Aurora Matrimony</strong>.
                 Questions? Contact our
                 <a href="mailto:support@${domain}"
                    style="color:${C.maroon};text-decoration:none;font-weight:600;">support team</a>.
               </p>
-              <p style="margin:0;font-size:11px;color:${C.roseGoldLight};">© ${year} Suhana Matrimony. All rights reserved.</p>
+              <p style="margin:0;font-size:11px;color:${C.roseGoldLight};">© ${year} Aurora Matrimony. All rights reserved.</p>
             </td>
           </tr>
 
@@ -412,7 +412,7 @@ export const profileActionOtpEmailTemplate = (params: {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>Your verification code – Suhana Matrimony</title>
+  <title>Your verification code – Aurora Matrimony</title>
 </head>
 <body style="margin:0;padding:0;background-color:${C.blush};font-family:'Segoe UI',Arial,sans-serif;">
  
@@ -485,7 +485,7 @@ export const profileActionOtpEmailTemplate = (params: {
                     </table>
  
                     <p style="margin:0;font-size:12px;color:${C.textSecondary};line-height:1.5;">
-                      Enter this code in the verification window on your Suhana Matrimony account
+                      Enter this code in the verification window on your Aurora Matrimony account
                     </p>
                   </td>
                 </tr>
@@ -572,7 +572,7 @@ export const profileActionOtpEmailTemplate = (params: {
                    style="color:${C.maroon};text-decoration:none;font-weight:600;">support team</a>.
               </p>
               <p style="margin:0;font-size:11px;color:${C.roseGoldLight};">
-                © ${year} Suhana Matrimony. All rights reserved.
+                © ${year} Aurora Matrimony. All rights reserved.
               </p>
             </td>
           </tr>
@@ -610,7 +610,7 @@ export const interestAcceptedEmailTemplate = (params: {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>Your Interest Has Been Accepted – Suhana Matrimony</title>
+  <title>Your Interest Has Been Accepted – Aurora Matrimony</title>
 </head>
 <body style="margin:0;padding:0;background-color:${C.blush};font-family:'Segoe UI',Arial,sans-serif;">
 
@@ -655,7 +655,7 @@ export const interestAcceptedEmailTemplate = (params: {
               </p>
               <p style="margin:0 0 28px;font-size:15px;color:${C.textPrimary};line-height:1.7;">
                 Good news! <strong style="color:${C.maroon};">${acceptorFirstName}</strong> has
-                accepted your interest request on <strong>Suhana Matrimony</strong>.
+                accepted your interest request on <strong>Aurora Matrimony</strong>.
                 You can now log in to continue the conversation and view their full profile.
               </p>
 
@@ -712,13 +712,13 @@ export const interestAcceptedEmailTemplate = (params: {
             <td style="background:${C.blush};border-top:1px solid ${C.roseGoldLighter};
                        padding:24px 40px;text-align:center;">
               <p style="margin:0 0 6px;font-size:13px;color:${C.textSecondary};line-height:1.6;">
-                This email was sent by <strong style="color:${C.maroon};">Suhana Matrimony</strong>.
+                This email was sent by <strong style="color:${C.maroon};">Aurora Matrimony</strong>.
                 Questions? Contact our
                 <a href="mailto:support@${domain}"
                    style="color:${C.maroon};text-decoration:none;font-weight:600;">support team</a>.
               </p>
               <p style="margin:0;font-size:11px;color:${C.roseGoldLight};">
-                © ${year} Suhana Matrimony. All rights reserved.
+                © ${year} Aurora Matrimony. All rights reserved.
               </p>
             </td>
           </tr>
@@ -805,7 +805,7 @@ export const interestRequestEmailTemplate = (params: {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>${senderFirstName} is interested in your profile – Suhana Matrimony</title>
+  <title>${senderFirstName} is interested in your profile – Aurora Matrimony</title>
 </head>
 <body style="margin:0;padding:0;background-color:${C.blush};font-family:'Segoe UI',Arial,sans-serif;">
  
@@ -865,7 +865,7 @@ export const interestRequestEmailTemplate = (params: {
               </p>
               <p style="margin:0 0 28px;font-size:15px;color:${C.textPrimary};line-height:1.7;">
                 Great news! <strong style="color:${C.maroon};">${senderFirstName}</strong>
-                came across your profile on <strong>Suhana Matrimony</strong> and felt a genuine
+                came across your profile on <strong>Aurora Matrimony</strong> and felt a genuine
                 connection. They have sent you an interest request and are hoping to get to
                 know you better.
               </p>
@@ -1021,7 +1021,7 @@ export const interestRequestEmailTemplate = (params: {
                    style="color:${C.maroon};text-decoration:none;font-weight:600;">support team</a>.
               </p>
               <p style="margin:0;font-size:11px;color:${C.roseGoldLight};">
-                © ${year} Suhana Matrimony. All rights reserved.
+                © ${year} Aurora Matrimony. All rights reserved.
               </p>
             </td>
           </tr>
@@ -1076,7 +1076,7 @@ export const feedbackAdminNotificationTemplate = (params: {
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-  <title>New Feedback – Suhana Matrimony Admin</title>
+  <title>New Feedback – Aurora Matrimony Admin</title>
 </head>
 <body style="margin:0;padding:0;background-color:${C.blush};font-family:${C.fontname};">
 
@@ -1098,7 +1098,7 @@ export const feedbackAdminNotificationTemplate = (params: {
               New Feedback Received
             </h1>
             <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.8);line-height:1.5;">
-              A member has submitted feedback on Suhana Matrimony
+              A member has submitted feedback on Aurora Matrimony
             </p>
             <!-- Alert strip -->
             <div style="display:inline-block;margin-top:14px;background:rgba(201,168,76,0.22);
@@ -1214,7 +1214,7 @@ export const feedbackAdminNotificationTemplate = (params: {
             </p>
             <p style="margin:0;font-size:11px;color:${C.roseGoldLight};
                       font-family:Arial,Helvetica,sans-serif;">
-              © ${year} Suhana Matrimony. All rights reserved.
+              © ${year} Aurora Matrimony. All rights reserved.
             </p>
           </td>
         </tr>
@@ -1250,7 +1250,7 @@ export const feedbackThankYouTemplate = (params: {
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-  <title>Thank You for Your Feedback – Suhana Matrimony</title>
+  <title>Thank You for Your Feedback – Aurora Matrimony</title>
 </head>
 <body style="margin:0;padding:0;background-color:${C.ivoryWarm};font-family:${C.fontname};">
 
@@ -1370,7 +1370,7 @@ export const feedbackThankYouTemplate = (params: {
                       font-size:15px;color:${C.textPrimary};">Warm regards,</p>
             <p style="margin:0 0 2px;font-family:${C.fontname};
                       font-size:16px;font-weight:700;color:${C.maroon};">
-              The Suhana Matrimony Team
+              The Aurora Matrimony Team
             </p>
             <p style="margin:0;font-family:${C.fontname};
                       font-size:12px;color:${C.roseGold};">
@@ -1391,7 +1391,7 @@ export const feedbackThankYouTemplate = (params: {
             </p>
             <p style="margin:0;font-size:11px;color:${C.roseGoldLight};
                       font-family:Arial,Helvetica,sans-serif;">
-              © ${year} Suhana Matrimony. All rights reserved.
+              © ${year} Aurora Matrimony. All rights reserved.
             </p>
           </td>
         </tr>
@@ -1426,7 +1426,7 @@ export const profileFeedbackNotificationTemplate = (params: {
   const year = new Date().getFullYear();
 
   // This mirrors the reviewerDisplay logic from the caller's snippet
-  const reviewerDisplay = isAnonymous ? 'a Suhana member' : reviewerName;
+  const reviewerDisplay = isAnonymous ? 'a Aurora member' : reviewerName;
 
   return `
 <!DOCTYPE html>
@@ -1435,7 +1435,7 @@ export const profileFeedbackNotificationTemplate = (params: {
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-  <title>New Feedback on Your Profile – Suhana Matrimony</title>
+  <title>New Feedback on Your Profile – Aurora Matrimony</title>
 </head>
 <body style="margin:0;padding:0;background-color:${C.blush};font-family:${C.fontname};">
 
@@ -1544,7 +1544,7 @@ export const profileFeedbackNotificationTemplate = (params: {
                       font-size:15px;color:${C.textPrimary};">Warm regards,</p>
             <p style="margin:0 0 2px;font-family:${C.fontname};
                       font-size:16px;font-weight:700;color:${C.maroon};">
-              The Suhana Matrimony Team
+              The Aurora Matrimony Team
             </p>
             <p style="margin:0;font-family:${C.fontname};
                       font-size:12px;color:${C.roseGold};">
@@ -1559,14 +1559,14 @@ export const profileFeedbackNotificationTemplate = (params: {
                      padding:16px 40px;text-align:center;">
             <p style="margin:0 0 4px;font-size:12px;color:${C.textSecondary};
                       font-family:Arial,Helvetica,sans-serif;">
-              You received this because feedback was left on your Suhana Matrimony profile. &nbsp;
+              You received this because feedback was left on your Aurora Matrimony profile. &nbsp;
               <a href="mailto:support@${domain}"
                  style="color:${C.maroon};text-decoration:none;font-weight:600;">
                 Contact support</a>
             </p>
             <p style="margin:0;font-size:11px;color:${C.roseGoldLight};
                       font-family:Arial,Helvetica,sans-serif;">
-              © ${year} Suhana Matrimony. All rights reserved.
+              © ${year} Aurora Matrimony. All rights reserved.
             </p>
           </td>
         </tr>
@@ -1609,7 +1609,7 @@ export const feedbackReplyTemplate = (params: {
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-  <title>We Replied to Your Feedback – Suhana Matrimony</title>
+  <title>We Replied to Your Feedback – Aurora Matrimony</title>
 </head>
 <body style="margin:0;padding:0;background-color:${C.ivoryWarm};font-family:${C.fontname};">
 
@@ -1631,7 +1631,7 @@ export const feedbackReplyTemplate = (params: {
               We Replied to Your Feedback
             </h1>
             <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.82);line-height:1.5;">
-              A response from the Suhana Matrimony team
+              A response from the Aurora Matrimony team
             </p>
           </td>
         </tr>
@@ -1689,7 +1689,7 @@ export const feedbackReplyTemplate = (params: {
                            border-radius:6px;padding:14px 18px;">
                   <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
                             font-size:13px;color:${C.maroonDark};line-height:1.6;">
-                    <strong>Thank you for helping us improve Suhana Matrimony.</strong>
+                    <strong>Thank you for helping us improve Aurora Matrimony.</strong>
                     Your feedback is invaluable to us and every suggestion helps shape
                     a better experience for all our members.
                   </p>
@@ -1711,7 +1711,7 @@ export const feedbackReplyTemplate = (params: {
                             padding:14px 36px;border-radius:50px;
                             box-shadow:0 6px 20px rgba(162,0,0,0.3);
                             letter-spacing:0.3px;">
-                    Continue on Suhana Matrimony
+                    Continue on Aurora Matrimony
                   </a>
                 </td>
               </tr>
@@ -1728,7 +1728,7 @@ export const feedbackReplyTemplate = (params: {
                       font-size:15px;color:${C.textPrimary};">Warm regards,</p>
             <p style="margin:0 0 2px;font-family:${C.fontname};
                       font-size:16px;font-weight:700;color:${C.maroon};">
-              The Suhana Matrimony Team
+              The Aurora Matrimony Team
             </p>
             <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
                       font-size:12px;color:${C.roseGold};">
@@ -1743,7 +1743,7 @@ export const feedbackReplyTemplate = (params: {
                      padding:16px 40px;text-align:center;">
             <p style="margin:0 0 4px;font-size:12px;color:${C.textSecondary};
                       font-family:Arial,Helvetica,sans-serif;">
-              © ${year} Suhana Matrimony &nbsp;&bull;&nbsp;
+              © ${year} Aurora Matrimony &nbsp;&bull;&nbsp;
               Response to your submitted feedback &nbsp;&bull;&nbsp;
               <a href="mailto:support@${domain}"
                  style="color:${C.maroon};text-decoration:none;font-weight:600;">
@@ -1804,11 +1804,11 @@ export const shareProfileEmailTemplate = (params: {
 
   // Personal message — use caller's text or a warm default
   const personalNote = (params.body ?? '').trim()
-    || `I came across this profile on Suhana Matrimony and thought it might be a great match for you. Take a look and let me know what you think!`;
+    || `I came across this profile on Aurora Matrimony and thought it might be a great match for you. Take a look and let me know what you think!`;
 
   // Email subject line — caller can override
   const emailSubject = (params.subject ?? '').trim()
-    || `${senderName} shared a profile with you on Suhana Matrimony`;
+    || `${senderName} shared a profile with you on Aurora Matrimony`;
 
   // Sender initial for the sign-off avatar
   const initial = senderName.trim().charAt(0).toUpperCase() || 'S';
@@ -1854,7 +1854,7 @@ export const shareProfileEmailTemplate = (params: {
               Someone Shared a Profile With You!
             </h1>
             <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.82);line-height:1.5;font-family:${C.fontname};">
-              A Suhana Matrimony member thinks this could be your perfect match
+              A Aurora Matrimony member thinks this could be your perfect match
             </p>
 
             <!-- Gold badge -->
@@ -1888,7 +1888,7 @@ export const shareProfileEmailTemplate = (params: {
                       font-size:15px;color:${C.textPrimary};line-height:1.8;">
               <strong style="color:${C.maroon};">${senderName}</strong>
               would like to share a profile from
-              <strong>Suhana Matrimony</strong> with you.
+              <strong>Aurora Matrimony</strong> with you.
             </p>
 
             <!-- Personal note from sender — left-bordered quote -->
@@ -1967,7 +1967,7 @@ export const shareProfileEmailTemplate = (params: {
                     <strong>&#128274;&nbsp; Your privacy is protected.</strong>
                     <span style="color:${C.textSecondary};">
                       Contact details are only shared once both members choose
-                      to connect on Suhana Matrimony.
+                      to connect on Aurora Matrimony.
                     </span>
                   </p>
                 </td>
@@ -2008,7 +2008,7 @@ export const shareProfileEmailTemplate = (params: {
                   </p>
                   <p style="margin:2px 0 0;font-family:${C.fontname};
                             font-size:12px;color:${C.roseGold};">
-                    via Suhana Matrimony
+                    via Aurora Matrimony
                   </p>
                 </td>
               </tr>
@@ -2024,7 +2024,7 @@ export const shareProfileEmailTemplate = (params: {
                      padding:18px 40px;text-align:center;">
             <p style="margin:0 0 4px;font-size:12px;color:${C.textSecondary};
                       font-family:Arial,Helvetica,sans-serif;line-height:1.7;">
-              This profile was shared with you by a Suhana Matrimony member. &nbsp;
+              This profile was shared with you by a Aurora Matrimony member. &nbsp;
               <a href="mailto:support@${domain}"
                  style="color:${C.maroon};text-decoration:none;font-weight:600;">
                 Contact support</a>
@@ -2032,7 +2032,7 @@ export const shareProfileEmailTemplate = (params: {
             </p>
             <p style="margin:0;font-size:11px;color:${C.roseGoldLight};
                       font-family:Arial,Helvetica,sans-serif;">
-              © ${year} Suhana Matrimony &nbsp;&bull;&nbsp; Connecting hearts, building futures.
+              © ${year} Aurora Matrimony &nbsp;&bull;&nbsp; Connecting hearts, building futures.
             </p>
           </td>
         </tr>

@@ -61,7 +61,7 @@ export const mobileVerifiedEmailTemplate = (params: {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>Mobile Number Verified – Suhana Matrimony</title>
+  <title>Mobile Number Verified – Aurora Matrimony</title>
 </head>
 <body style="margin:0;padding:0;background-color:${C.blush};font-family:${C.fontname}">
 
@@ -250,7 +250,7 @@ export const mobileVerifiedEmailTemplate = (params: {
                         font-size:15px;color:${C.textPrimary};">Thank you,</p>
               <p style="margin:0 0 2px;font-family:${C.fontname};
                         font-size:16px;font-weight:700;color:${C.maroon};">
-                The Suhana Matrimony Team
+                The Aurora Matrimony Team
               </p>
               <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
                         font-size:12px;color:${C.roseGold};">
@@ -275,7 +275,7 @@ export const mobileVerifiedEmailTemplate = (params: {
               </p>
               <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
                         font-size:11px;color:${C.roseGoldLight};">
-                © ${year} Suhana Matrimony. All rights reserved.
+                © ${year} Aurora Matrimony. All rights reserved.
               </p>
             </td>
           </tr>
