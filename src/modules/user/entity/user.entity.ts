@@ -57,8 +57,14 @@ export class User {
   @Column({ type: 'datetime' })
   created_at: Date
   
+  @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+  created_at_utc: Date
+
   @Column({ type: 'datetime', nullable: true })
   updated_at: Date
+
+  @Column({ type: 'datetime', nullable: true })
+  updated_at_utc: Date
   
   @UpdateDateColumn()
   last_active: Date;
@@ -102,6 +108,9 @@ export class User {
 
   @Column({type: 'uuid', nullable: true, comment: 'to store the temp guid to validate during the registration'})
   temp_guid?: string
+
+  @Column({ length: 20, nullable: true, default: 'America/New_York' })
+  timezone: string;
 
   @OneToMany(() => PasswordArchive, passwordArchive => passwordArchive.user)
   password_history: PasswordArchive[];

@@ -93,4 +93,11 @@ export class RegisterDto {
   @IsOptional()
   role_guid: string;
 
+  @ApiProperty({
+    example: 'America/New_York',
+    description: 'User timezone',
+  })
+  @IsNotEmpty()
+  timezone: string;
+
 }

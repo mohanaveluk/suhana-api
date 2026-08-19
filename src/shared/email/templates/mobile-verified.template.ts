@@ -134,7 +134,7 @@ export const mobileVerifiedEmailTemplate = (params: {
                         font-size:15px;color:${C.textPrimary};line-height:1.8;">
                 Your mobile number has been verified successfully.
                 You can now continue using all features of
-                <strong style="color:${C.maroon};">Suhana Matrimony</strong>
+                <strong style="color:${C.maroon};">Aurora Matrimony</strong>
                 with a verified profile.
               </p>
 
@@ -266,7 +266,7 @@ export const mobileVerifiedEmailTemplate = (params: {
               <p style="margin:0 0 5px;font-family:Arial,Helvetica,sans-serif;
                         font-size:13px;color:${C.textSecondary};line-height:1.6;">
                 This email was sent by
-                <strong style="color:${C.maroon};">Suhana Matrimony</strong>
+                <strong style="color:${C.maroon};">Aurora Matrimony</strong>
                 because a mobile number was verified on your account.
                 Questions? Contact our
                 <a href="mailto:support@${domain}"

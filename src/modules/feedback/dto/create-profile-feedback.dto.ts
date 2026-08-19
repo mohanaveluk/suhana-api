@@ -7,7 +7,7 @@ import { Type } from 'class-transformer';
 import { FeedbackCategory, PROFILE_CATEGORIES } from '../enums/feedback-category.enum';
 
 export class CreateProfileFeedbackDto {
-  @ApiProperty({ description: 'Suhana user ID of the profile being reviewed', example: 'uuid-...' })
+  @ApiProperty({ description: 'Aurora user ID of the profile being reviewed', example: 'uuid-...' })
   @IsString()
   @IsNotEmpty()
   targetUserId: string;

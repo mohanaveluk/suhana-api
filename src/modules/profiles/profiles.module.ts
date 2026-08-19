@@ -13,12 +13,13 @@ import { AuditModule } from '../audit/audit.module';
 // Provides VoiceUploadService, used to verify a voice URL belongs to the caller
 // before it is attached to their profile.
 import { MediaModule } from '../media/media.module';
+import { DateService } from 'src/shared/services/date.service';
 
 
 @Module({
   imports: [TypeOrmModule.forFeature([Profile, ProfilePhoto, User]), LookupModule, LogModule, EmailModule, AuditModule, MediaModule],
   controllers: [ProfilesController],
-  providers: [ProfilesService, CloudStorageService],
+  providers: [ProfilesService, CloudStorageService, DateService,],
   exports: [ProfilesService],
 })
 export class ProfilesModule {}

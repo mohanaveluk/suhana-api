@@ -10,35 +10,35 @@ export class CreateMatchFixedDto {
   @ApiProperty({
     enum: MatchSourceType,
     description: 'How the match was found',
-    example: MatchSourceType.SUHANA,
+    example: MatchSourceType.AURORA,
   })
   @IsEnum(MatchSourceType)
   @IsNotEmpty()
   matchSourceType: MatchSourceType;
 
   @ApiPropertyOptional({
-    description: 'Suhana user ID of matched partner — required when matchSourceType is SUHANA and matchedUserGuid is absent',
+    description: 'Aurora user ID of matched partner — required when matchSourceType is AURORA and matchedUserGuid is absent',
     example: 'a1b2c3d4-...',
   })
-  @ValidateIf((o) => o.matchSourceType === MatchSourceType.SUHANA && !o.matchedUserGuid)
+  @ValidateIf((o) => o.matchSourceType === MatchSourceType.AURORA && !o.matchedUserGuid)
   @IsNotEmpty()
   @IsString()
   matchedUserId?: string;
 
   @ApiPropertyOptional({
-    description: 'Suhana user GUID of matched partner — required when matchSourceType is SUHANA and matchedUserId is absent',
+    description: 'Aurora user GUID of matched partner — required when matchSourceType is AURORA and matchedUserId is absent',
     example: 'guid-...',
   })
-  @ValidateIf((o) => o.matchSourceType === MatchSourceType.SUHANA && !o.matchedUserId)
+  @ValidateIf((o) => o.matchSourceType === MatchSourceType.AURORA && !o.matchedUserId)
   @IsNotEmpty()
   @IsString()
   matchedUserGuid?: string;
 
   @ApiPropertyOptional({
-    description: 'Partner full name — required when matchSourceType is NOT SUHANA',
+    description: 'Partner full name — required when matchSourceType is NOT AURORA',
     example: 'Ravi Kumar',
   })
-  @ValidateIf((o) => o.matchSourceType !== MatchSourceType.SUHANA)
+  @ValidateIf((o) => o.matchSourceType !== MatchSourceType.AURORA)
   @IsNotEmpty()
   @IsString()
   partnerName?: string;

@@ -40,7 +40,6 @@ import { customAlphabet, nanoid } from 'nanoid';
 import { EmailType } from '../email-history/entity/email-history.entity';
 
 
-
 @Injectable()
 export class AuthService {
   constructor(
@@ -95,7 +94,7 @@ export class AuthService {
 
       const hashedPassword = await bcrypt.hash(registerDto.password, 10);
       const verificationCode = this.generateOTC();
-      const verificationCodeExpiry = new Date(Date.now() + 30 * 60 * 1000); // 15 minutes
+      const verificationCodeExpiry = await this.dateService.addMinutesToCurrentDateTimeInUTC(15); // 15 minutes from now
 
       const profileCode = await this.generateUniqueProfileCode();
 
@@ -103,7 +102,9 @@ export class AuthService {
         // Update user properties
         Object.assign(unverifiedUser, registerDto);
         unverifiedUser.password = hashedPassword;
-        unverifiedUser.updated_at = new Date();
+        //store utc datetime to updated_at
+        unverifiedUser.updated_at = new Date(await this.dateService.getCurrentDateTime());
+        unverifiedUser.updated_at_utc = new Date(await this.dateService.getCurrentDateTimeInUTC());
         unverifiedUser.verification_code = verificationCode;
         unverifiedUser.verification_code_expiry = verificationCodeExpiry;
         unverifiedUser.is_email_verified = false;
@@ -138,11 +139,13 @@ export class AuthService {
         role: userRole,
         role_id: role.id,
         created_at: new Date(await this.dateService.getCurrentDateTime()),
+        created_at_utc: new Date(await this.dateService.getCurrentDateTimeInUTC()),
         verification_code: verificationCode,
         verification_code_expiry: verificationCodeExpiry,
         is_email_verified: false,
         is_active: 0,
         temp_guid: uuidv4(),
+        timezone: registerDto.timezone,
         profile
       }));
 
@@ -154,7 +157,7 @@ export class AuthService {
       const userFirstName = savedUser.first_name ? (savedUser.first_name === "" || savedUser.first_name === 'unknown' ? "User": savedUser.first_name) : "User";
       await this.emailService.sendEmail({
         to: user.email,
-        subject: 'Suhana - Verify Your Email Address',
+        subject: 'Aurora - Verify Your Email Address',
         html: verifyEmailTemplate(verificationCode, user.id, userFirstName, domain),
         history: {
           emailType: EmailType.EMAIL_VERIFICATION,
@@ -233,7 +236,7 @@ export class AuthService {
 
     // check if the updatedat or createdAt os greater than 15 mins then return expired code message
     const referenceTime = user.verification_code_expiry;
-    if (referenceTime < new Date()) {
+    if (referenceTime < new Date(await this.dateService.getCurrentDateTimeInUTC())) {
       throw new HttpException('Verification code has expired. Please request a new verification mail.', 410);
     }
 
@@ -301,7 +304,7 @@ export class AuthService {
         // Send verification email
         await this.emailService.sendEmail({
           to: user.email,
-          subject: 'Suhana - Verify Your Email Address',
+          subject: 'Aurora - Verify Your Email Address',
           html: verifyEmailTemplate(verificationCode, user.id, user.first_name, domain),
           history: {
             emailType: EmailType.EMAIL_VERIFICATION,
@@ -383,7 +386,7 @@ export class AuthService {
 
     await this.emailService.sendEmail({
       to: user.email,
-      subject: 'Suhana - Your one-time login code',
+      subject: 'Aurora - Your one-time login code',
       html: loginOtpEmailTemplate({
         otp: code,
         firstName: user.first_name,
@@ -650,7 +653,7 @@ export class AuthService {
       this.logger.debug(`Sending email with reset link for user: '${user.email}'`);
       await this.emailService.sendEmail({
         to: user.email,
-        subject: 'Suhana - Password Reset Request',
+        subject: 'Aurora - Password Reset Request',
         html: passwordResetTemplate(resetLink),
         history: {
           emailType: EmailType.PASSWORD_RESET,
@@ -726,7 +729,7 @@ export class AuthService {
       // Send verification email
       await this.emailService.sendEmail({
         to: user.email,
-        subject: 'Suhana - Verify Your Email Address',
+        subject: 'Aurora - Verify Your Email Address',
         html: verifyEmailTemplate(verificationCode, user.id, user.first_name, "domain"),
         history: {
           emailType: EmailType.EMAIL_VERIFICATION,
@@ -761,17 +764,18 @@ export class AuthService {
       }
 
       const verificationCode = this.generateOTC();
-      const verificationCodeExpiry = new Date(Date.now() + 30 * 60 * 1000);
+      const verificationCodeExpiry = new Date(await this.dateService.addMinutesToCurrentDateTimeInUTC(15)); // 15 minutes from now
       user.verification_code = verificationCode;
       user.verification_code_expiry = verificationCodeExpiry;
-      user.updated_at = new Date();
+      user.updated_at = new Date(await this.dateService.getCurrentDateTime());
+      user.updated_at_utc = new Date(await this.dateService.getCurrentDateTimeInUTC());
       
       await this.userRepository.save(user);
       // Send verification email
       
       await this.emailService.sendEmail({
         to: user.email,
-        subject: 'Suhana - Verify Your Email Address',
+        subject: 'Aurora - Verify Your Email Address',
         html: verifyEmailTemplate(verificationCode, user.id, user.first_name, domain),
         history: {
           emailType: EmailType.EMAIL_VERIFICATION,
@@ -819,7 +823,7 @@ export class AuthService {
     // Send OTP email
     await this.emailService.sendEmail({
       to:      email,
-      subject: 'Suhana - Your password reset code',
+      subject: 'Aurora - Your password reset code',
       html:    buildOtpEmailHtml(otp, user.first_name ?? 'there'),
       history: {
         emailType: EmailType.PASSWORD_RESET,
