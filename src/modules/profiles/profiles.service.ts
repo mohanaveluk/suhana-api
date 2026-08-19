@@ -16,6 +16,7 @@ import { AuditEmitter } from '../audit/audit.emitter';
 import { AuditEventType } from '../audit/enums/audit-event-type.enum';
 import { AuditEntityType } from '../audit/enums/audit-entity-type.enum';
 import { VoiceUploadService } from '../media/voice-upload.service';
+import { DateService } from 'src/shared/services/date.service';
 
 
 @Injectable()
@@ -30,6 +31,7 @@ export class ProfilesService {
     private logger: CustomLoggerService,
     private auditEmitter: AuditEmitter,
     private voiceUploadService: VoiceUploadService,
+    private dateService: DateService,
   ) {}
 
   // Scalar profile fields worth tracking for the audit trail / change detection.
@@ -268,7 +270,12 @@ export class ProfilesService {
         manglikStatus: dto.horoscope?.manglikStatus || user.profile.horoscope?.manglikStatus,
         documentUrl: dto.horoscope?.documentUrl || user.profile.horoscope?.documentUrl,
       };
-      user.updated_at = user.verification_code_expiry = new Date();
+      //update UTC datetime for last updated and verification code expiry
+      user.last_active = new Date();
+      user.updated_at = new Date(await this.dateService.getCurrentDateTime());
+
+      user.updated_at_utc = new Date(await this.dateService.getCurrentDateTimeInUTC());
+      user.verification_code_expiry = new Date(await this.dateService.addMinutesToCurrentDateTimeInUTC(15));
       user.profile.horoscopeDocUrl = dto.horoscope?.documentUrl || user.profile.horoscopeDocUrl;
 
       // Voice introduction: only changed when the key is actually present, so an

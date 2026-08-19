@@ -13,7 +13,7 @@ export interface ContactFormData {
 const SUBJECT_LABELS: Record<string, string> = {
   general:     'General Enquiry',
   support:     'Technical Support',
-  suhana:      'suhana Help',
+  suhana:      'Aurora Help',
   billing:     'Billing & Account',
   partnership: 'Partnership & Business',
   feedback:    'Feedback & Suggestions',

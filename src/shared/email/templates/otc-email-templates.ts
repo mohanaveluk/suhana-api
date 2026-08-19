@@ -424,7 +424,7 @@ export const buildOtpEmailHtml1 = (otp: string, firstName: string): string => {
             <td style="background:#f7f8ff;border-top:1px solid #e5e7eb;
                       padding:20px 40px;text-align:center;">
               <p style="margin:0 0 4px;font-size:13px;color:#888;">
-                Sent by <strong style="color:#4f46e5;">Suhana Matrimony</strong>
+                Sent by <strong style="color:#4f46e5;">Aurora Matrimony</strong>
               </p>
               <p style="margin:0;font-size:11px;color:#bbb;">
                 © ${year} Aurora Matrimony. All rights reserved.
@@ -504,7 +504,7 @@ export const buildOtpEmailHtml = (otp: string, firstName: string): string => {
             <td style="padding:40px 40px 32px;">
               <p style="margin:0 0 24px;font-size:15px;color:#3d2c2e;line-height:1.7;font-family:Arial,Helvetica,sans-serif;">
                 Dear <strong>${username}</strong>,<br/><br/>
-                We received a request to reset the password for your <strong style="color:#a20000;">Suhana Matrimony</strong> account.
+                We received a request to reset the password for your <strong style="color:#a20000;">Aurora Matrimony</strong> account.
                 Use the code below — it is valid for <strong>5 minutes</strong>.
               </p>
   
@@ -580,7 +580,7 @@ export const buildOtpEmailHtml = (otp: string, firstName: string): string => {
             <td style="background:#fde8e8;border-top:1px solid #f0d4d8;
                       padding:20px 40px;text-align:center;">
               <p style="margin:0 0 4px;font-size:13px;color:#6b5557;font-family:Arial,Helvetica,sans-serif;">
-                Sent by <strong style="color:#a20000;">Suhana Matrimony</strong>
+                Sent by <strong style="color:#a20000;">Aurora Matrimony</strong>
               </p>
               <p style="margin:0;font-size:11px;color:#d4a0a7;font-family:Arial,Helvetica,sans-serif;">
                 © ${year} Aurora Matrimony. All rights reserved.
@@ -888,7 +888,7 @@ export const loginOtpEmailTemplate = (params: {
               <p style="margin:0 0 5px;font-family:Arial,Helvetica,sans-serif;
                         font-size:13px;color:${C.textSecondary};line-height:1.6;">
                 This email was sent by
-                <strong style="color:${C.maroon};">Suhana Matrimony</strong>
+                <strong style="color:${C.maroon};">Aurora Matrimony</strong>
                 because a sign-in was requested for
                 <strong>${email}</strong>.
                 Questions? Contact our

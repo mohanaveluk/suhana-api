@@ -41,7 +41,7 @@ export class ReviewAnalyticsService {
     const authors = await this.resolveNames(reviewersRaw.map((r) => r.userId));
     const mostActiveReviewers = reviewersRaw.map((r) => ({
       userId: r.userId,
-      name: authors.get(r.userId) ?? 'Suhana Member',
+      name: authors.get(r.userId) ?? 'Aurora Member',
       reviewCount: Number(r.count),
     }));
 
@@ -66,7 +66,7 @@ export class ReviewAnalyticsService {
     if (!unique.length) return map;
     const users = await this.userRepo.find({ where: unique.map((id) => ({ id })) });
     for (const u of users) {
-      map.set(u.id, [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || 'Suhana Member');
+      map.set(u.id, [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || 'Aurora Member');
     }
     return map;
   }

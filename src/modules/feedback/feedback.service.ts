@@ -301,7 +301,7 @@ export class FeedbackService {
             subject: 'Response To Your Feedback — Aurora Matrimony',
             html: feedbackReplyTemplate({
               userName: submitter.first_name,
-              repliedBy: replier ? `${replier.first_name} ${replier.last_name ?? ''}`.trim() : 'Suhana Support',
+              repliedBy: replier ? `${replier.first_name} ${replier.last_name ?? ''}`.trim() : 'Aurora Support',
               originalSubject: existing.subject,
               originalMessage: existing.message,
               replyMessage: dto.message,

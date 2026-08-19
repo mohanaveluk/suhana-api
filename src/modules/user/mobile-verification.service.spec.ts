@@ -107,7 +107,7 @@ describe('MobileVerificationService', () => {
 
       const sms = smsService.sendSms.mock.calls[0][0];
       expect(sms.to).toBe(MOBILE);
-      expect(sms.body).toMatch(/^Your Suhana Matrimony verification code is \d{6}\./);
+      expect(sms.body).toMatch(/^Your Aurora Matrimony verification code is \d{6}\./);
       expect(sms.body).toContain('expires in 10 minutes');
       expect(sms.body).toContain('Do not share this code');
     });

@@ -206,7 +206,7 @@ export class ReviewsService {
     for (const u of users) {
       map.set(u.id, {
         userId: u.id,
-        name: [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || 'Suhana Member',
+        name: [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || 'Aurora Member',
         profileImage: u.profile_image ?? null,
       });
     }

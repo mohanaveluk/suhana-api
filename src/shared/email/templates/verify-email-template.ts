@@ -566,7 +566,7 @@ export const profileActionOtpEmailTemplate = (params: {
             <td style="background:${C.blush};border-top:1px solid ${C.roseGoldLighter};
                        padding:24px 40px;text-align:center;">
               <p style="margin:0 0 6px;font-size:13px;color:${C.textSecondary};line-height:1.6;">
-                This email was sent by <strong style="color:${C.maroon};">Suhana Matrimony</strong>.
+                This email was sent by <strong style="color:${C.maroon};">Aurora Matrimony</strong>.
                 Questions? Contact our
                 <a href="mailto:support@${domain}"
                    style="color:${C.maroon};text-decoration:none;font-weight:600;">support team</a>.
@@ -1014,7 +1014,7 @@ export const interestRequestEmailTemplate = (params: {
             <td style="background:${C.blush};border-top:1px solid ${C.roseGoldLighter};
                        padding:24px 40px;text-align:center;">
               <p style="margin:0 0 6px;font-size:13px;color:${C.textSecondary};line-height:1.6;">
-                This email was sent by <strong style="color:${C.maroon};">Suhana Matrimony</strong>
+                This email was sent by <strong style="color:${C.maroon};">Aurora Matrimony</strong>
                 because someone showed interest in your profile.
                 Questions? Contact our
                 <a href="mailto:support@${domain}"
@@ -1131,7 +1131,7 @@ export const feedbackAdminNotificationTemplate = (params: {
             <p style="margin:0 0 22px;font-family:Arial,Helvetica,sans-serif;
                       font-size:15px;color:${C.textPrimary};line-height:1.7;">
               Hello <strong>Admin</strong>,<br/>
-              A new feedback has been submitted on <strong style="color:${C.maroon};">Suhana Matrimony</strong>.
+              A new feedback has been submitted on <strong style="color:${C.maroon};">Aurora Matrimony</strong>.
               Please review the details below and take appropriate action.
             </p>
 
@@ -1207,7 +1207,7 @@ export const feedbackAdminNotificationTemplate = (params: {
                      padding:20px 40px;text-align:center;">
             <p style="margin:0 0 4px;font-size:13px;color:${C.textSecondary};
                       font-family:Arial,Helvetica,sans-serif;line-height:1.6;">
-              Internal notification — <strong style="color:${C.maroon};">Suhana Matrimony</strong>
+              Internal notification — <strong style="color:${C.maroon};">Aurora Matrimony</strong>
               Admin System &nbsp;&bull;&nbsp;
               <a href="mailto:support@${domain}"
                  style="color:${C.maroon};text-decoration:none;font-weight:600;">support@${domain}</a>
@@ -1293,7 +1293,7 @@ export const feedbackThankYouTemplate = (params: {
                       font-size:15px;color:${C.textPrimary};line-height:1.8;">
               Thank you for taking the time to share your feedback with us. Your
               opinion matters greatly and helps us improve the
-              <strong style="color:${C.maroon};">Suhana Matrimony</strong> experience
+              <strong style="color:${C.maroon};">Aurora Matrimony</strong> experience
               for every member of our community.
             </p>
 
@@ -1478,7 +1478,7 @@ export const profileFeedbackNotificationTemplate = (params: {
                       font-size:15px;color:${C.textPrimary};line-height:1.8;">
               You have received new feedback from
               <strong style="color:${C.maroon};">${reviewerDisplay}</strong>
-              on your <strong>Suhana Matrimony</strong> profile.
+              on your <strong>Aurora Matrimony</strong> profile.
             </p>
 
             <!-- Feedback summary card -->
