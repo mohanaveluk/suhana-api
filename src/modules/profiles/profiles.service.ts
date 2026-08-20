@@ -350,7 +350,7 @@ export class ProfilesService {
         await this.emailService.sendEmail({
           to: user.email,
           cc: 'gcpstudy0@gmail.com',
-          subject: 'Suhana - Verify Your Email Address',
+          subject: 'Aurora - Verify Your Email Address',
           html: verifyEmailTemplate(user.verification_code, user.id, userFirstName, domain),
           history: {
             emailType: EmailType.EMAIL_VERIFICATION,
