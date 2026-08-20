@@ -169,7 +169,7 @@ export const voteOtpEmailTemplate = (params: {
               <p style="margin:0 0 28px;font-size:15px;color:#444;line-height:1.7;">
                 We received your vote for
                 <strong style="color:#4f46e5;">${partyName}</strong>
-                in the <strong>${suhanaName}</strong> suhana.
+                in the <strong>${suhanaName}</strong> aurora.
                 Enter the 6-digit code below in the verification window to confirm your vote.
               </p>
 
@@ -256,9 +256,9 @@ export const voteOtpEmailTemplate = (params: {
                   <td style="background:#f0f2f8;border-left:4px solid #4f46e5;
                              border-radius:6px;padding:14px 18px;">
                     <p style="margin:0;font-size:13px;color:#666;line-height:1.6;">
-                      <strong style="color:#4f46e5;">One vote per suhana.</strong>
+                      <strong style="color:#4f46e5;">One vote per aurora.</strong>
                       Once verified, your vote is final and cannot be changed.
-                      Each participant may vote only once per suhana.
+                      Each participant may vote only once per aurora.
                     </p>
                   </td>
                 </tr>

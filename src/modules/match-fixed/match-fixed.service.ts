@@ -148,7 +148,7 @@ export class MatchFixedService {
       userId: adminId,
       method: VerificationMethod.ADMIN,
       note,
-      message: 'Match verified by Suhana. The success story is now marked as Verified!',
+      message: 'Match verified by Aurora. The success story is now marked as Verified!',
     });
   }
 
@@ -386,13 +386,13 @@ export class MatchFixedService {
     if (dto.matchSourceType === MatchSourceType.SUHANA) {
       if (!dto.matchedUserId && !dto.matchedUserGuid) {
         throw new BadRequestException(
-          'matchedUserId or matchedUserGuid is required when matchSourceType is SUHANA',
+          'matchedUserId or matchedUserGuid is required when matchSourceType is AURORA',
         );
       }
     } else {
       if (!dto.partnerName) {
         throw new BadRequestException(
-          'partnerName is required when matchSourceType is not SUHANA',
+          'partnerName is required when matchSourceType is not AURORA',
         );
       }
     }
