@@ -24,6 +24,7 @@ import {
   CountrySingleResponseDto,
   CountryQueryDto,
 } from './dto/country.dto';
+import { StateResponseDto } from './dto/state.dto';
 
 @ApiTags('Countries')
 @Controller('countries')
@@ -125,4 +126,32 @@ export class CountryController {
       `or an ISO code (e.g. IN, US, GBR).`,
     );
   }
+
+// ── get states of a country by country id ─────────────────────────────────────────
+  @Get(':id/states')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:     'Get all states of a country by country ID',
+    description:
+      'Returns a list of all states that belong to the specified country. ' +
+      'The country is identified by its UUID. If the country does not exist, a 404 error is returned.',
+  })
+  @ApiParam({
+    name:        'id',
+    description: 'Country UUID',
+    example:     'c81fe682-33a0-11f1-abe6-00155d1e4039',
+  })
+  @ApiResponse({
+    status:      200,
+    description: 'States retrieved successfully',
+    type:        [StateResponseDto],
+  })
+  @ApiResponse({ status: 404, description: 'Country not found' })
+  async getStatesByCountryId(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) countryId: string,
+  ): Promise<StateResponseDto[]> {
+    return this.countryService.getStatesByCountryId(countryId);
+  }
+  
+
 }

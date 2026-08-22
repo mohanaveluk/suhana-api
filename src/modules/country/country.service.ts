@@ -9,6 +9,8 @@ import {
   CountrySingleResponseDto,
 } from './dto/country.dto';
 import { Country } from './entity/country.entity';
+import { StateResponseDto } from './dto/state.dto';
+import { State } from './entity/state.entity';
 
 
 @Injectable()
@@ -28,9 +30,20 @@ export class CountryService {
     };
   }
 
+  // mapper: state entity → DTO
+  private stateToDto(state: State): StateResponseDto {
+    return {
+      id:        state.id,
+      code:      state.code,
+      name:      state.name,
+      countryId: state.countryId,
+    };
+  }
+
   // ── GET all countries (sorted A-Z) ──────────────────────────────────────
   async findAll(): Promise<CountryListResponseDto> {
     const countries = await this.countryRepo.find({
+      where: { isActive: 1 },
       order: { name: 'ASC' },
     });
 
@@ -78,5 +91,17 @@ export class CountryService {
       data:      this.toDto(country),
       timestamp: new Date().toISOString(),
     };
+  }
+
+  // ── get states of a country by country id ─────────────────────────────────────────
+  async getStatesByCountryId(countryId: string): Promise<StateResponseDto[]> {
+    const country = await this.countryRepo.findOne({
+      where: { id: countryId },
+      relations: ['states'],
+    });
+    if (!country) {
+      throw new NotFoundException(`Country with id "${countryId}" not found`);
+    }
+    return (country.states ?? []).map(this.stateToDto.bind(this));
   }
 }

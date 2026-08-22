@@ -47,6 +47,12 @@ export class ProfilesController {
     return this.profilesService.findByEmailId(id);
   }
 
+  @Get('newemail/:id')
+  @ApiOperation({ summary: 'Get current user profile' })
+  findNewUserByEmailId(@Param('id') id: string) {
+    return this.profilesService.findNewUserByEmailId(id);
+  }
+
   @Get('admx/:id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')

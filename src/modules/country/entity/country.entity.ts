@@ -22,6 +22,8 @@ export class Country {
     @Column({ name: 'created_at', type: 'datetime', nullable: true, default: () => 'CURRENT_TIMESTAMP' })
     createdAt: Date;    
 
+    @Column({ name: 'is_active', type: 'integer', default: 1 })
+    isActive: number;
 
     @OneToMany(() => State, state => state.country)
     states: State[];    
