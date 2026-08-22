@@ -208,6 +208,25 @@ export class ProfilesService {
     return this.toUserProfileResponse(user);
   }
 
+  
+  async findNewUserByEmailId(email: string) {
+    const user = await this.userRepo.findOne({
+      where: { email: email },
+      relations: ['profile', 'profile.photos'],
+    });
+    if (!user?.profile) throw new NotFoundException('Profile not found');
+    
+    if (user?.profile?.photos?.length) {
+      user.profile.photos = user.profile.photos.filter(
+        photo => photo.isActive === 1,
+      );         
+      user.profile.photos.sort(
+        (a, b) => Number(b.isPrimary) - Number(a.isPrimary)
+      );
+    }
+    return this.toUserProfileResponse(user);
+  }
+
   async updateNew(domain: string, dto: UpdateProfileDto) {
     console.log(JSON.stringify(dto));
     this.logger.debug(`Updating new user information ${dto.userId}`);

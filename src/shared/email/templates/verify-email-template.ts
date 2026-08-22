@@ -263,10 +263,50 @@ export const verifyEmailTemplate = (
                 <tr>
                   <td style="background:${C.blush};border:1px solid ${C.roseGoldLighter};
                              border-radius:10px;padding:14px 18px;">
-                    <p style="margin:0 0 4px;font-size:11px;font-weight:600;
+                    <!--<p style="margin:0 0 4px;font-size:11px;font-weight:600;
                                color:${C.roseGold};text-transform:uppercase;letter-spacing:0.8px;">
                       Verification link
-                    </p>
+                    </p>-->
+                    <!-- Label row -->
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                           style="margin-bottom:8px;">
+                      <tr>
+                        <td>
+                          <p style="margin:0;font-size:11px;font-weight:700;
+                                     color:${C.roseGold};text-transform:uppercase;
+                                     letter-spacing:0.8px;font-family:Arial,Helvetica,sans-serif;">
+                            Verification Link
+                          </p>
+                        </td>
+                        <!-- "Copy Link" pill button — top-right of the box -->
+                        <!--<td align="right">
+                          <a href="https://${domain}/auth/copy-link?url=${encodeURIComponent(verificationUrl)}"
+                             target="_blank"
+                             title="Click to copy the verification link to your clipboard"
+                             style="display:inline-flex;align-items:center;gap:5px;
+                                    background:${C.maroon};
+                                    background:linear-gradient(135deg,${C.roseGold},${C.maroon});
+                                    color:#ffffff;text-decoration:none;
+                                    font-family:Arial,Helvetica,sans-serif;
+                                    font-size:11px;font-weight:700;letter-spacing:0.3px;
+                                    padding:5px 12px;border-radius:50px;">-->
+                            <!-- Clipboard SVG icon (inline — no external request) -->
+                            <!-- <svg xmlns="http://www.w3.org/2000/svg"
+                                 width="12" height="12" viewBox="0 0 24 24"
+                                 fill="none" stroke="white"
+                                 stroke-width="2.5" stroke-linecap="round"
+                                 stroke-linejoin="round"
+                                 style="display:inline-block;vertical-align:middle;">
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                            </svg>
+                            Copy Link
+                          </a>
+                        </td>-->
+                      </tr>
+                    </table>
+
+                    <!-- URL text — selectable, word-breaks on narrow screens -->
                     <a href="${verificationUrl}"
                        style="font-size:12px;color:${C.maroon};word-break:break-all;text-decoration:none;">
                       ${verificationUrl}
