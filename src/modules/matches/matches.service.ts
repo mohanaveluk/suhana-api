@@ -49,6 +49,7 @@ export class MatchesService {
       .andWhere('p.status = :status', { status: 'active' })
       .andWhere('p.is_searchable = :isSearchable', { isSearchable: 1 })
       .andWhere('u.id != :userId', { userId })
+      .andWhere('u.is_active = :ustatus', { ustatus: 1 })
       .orderBy('RAND()')
       .take(count)
       .getMany();

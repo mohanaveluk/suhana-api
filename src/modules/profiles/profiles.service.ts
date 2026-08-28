@@ -279,6 +279,7 @@ export class ProfilesService {
       user.profile.siblings = dto.familyDetails?.siblings || user.profile.siblings;
       user.profile.familyValues = dto.familyDetails?.familyValues || user.profile.familyValues;
       user.profile.familyPreferenceNote = dto.familyDetails?.familyPreferenceNote || user.profile.familyPreferenceNote;
+      user.profile.familyType = dto.familyDetails?.familyType;
 
       user.profile.horoscope = {
         dateOfBirth: dto.horoscope?.dateOfBirth ? new Date(dto.horoscope.dateOfBirth) : user.profile.horoscope?.dateOfBirth,
