@@ -77,6 +77,7 @@ export class InterestsService {
     });
     if (match) {
       match.status = 'interested';
+      match.currentStep = 2;
       await this.matchRepo.save(match);
     }
     else{
@@ -85,7 +86,7 @@ export class InterestsService {
         matchedUserId: toUserId,
         matchPercentage: 0,
         status: 'interested',
-        currentStep: 1,
+        currentStep: 2,
       });
       await this.matchRepo.save(newMatch);
     }
@@ -101,8 +102,7 @@ export class InterestsService {
     else{
       existing1 = this.interestRepo.create({ fromUserId, toUserId, message, guid: interestGuid });
     }
-    const interestResponse = await this.interestRepo.save(existing1);
-    
+    const interestResponse = await this.interestRepo.save(existing1);    
     // Send verification email
     this.logger.debug('Sending email...');
     await this.emailService.sendEmail({
@@ -116,7 +116,7 @@ export class InterestsService {
         senderAge: sender.profile.age,
         senderLocation: sender.profile.city,
         senderProfession: sender.profile.occupationTitle,
-        senderPhotoUrl: sender.profile.photos[0].url ?? "https://storage.googleapis.com/inv-images/profile/userview.png",
+        senderPhotoUrl: (sender.profile.photos.length > 0 && sender.profile.photos[0].url) ?? "https://storage.googleapis.com/inv-images/profile/userview.png",
         acceptUrl: `${domain}/accept/${interestResponse.id}/${interestGuid}`,
         viewProfileUrl: `${domain}/view/${sender.profile.profileCode}`,
         domain: domain
@@ -149,6 +149,7 @@ export class InterestsService {
     });
     if (match) {
       match.status = 'connected';
+      match.currentStep = 3,
       await this.matchRepo.save(match);
     }
     else{
@@ -157,7 +158,7 @@ export class InterestsService {
         matchedUserId: response.toUserId,
         matchPercentage: 0,
         status: 'connected',
-        currentStep: 1,
+        currentStep: 3,
       });
       await this.matchRepo.save(newMatch);
     }
@@ -205,6 +206,7 @@ export class InterestsService {
     });
     if (match) {
       match.status = 'connected';
+      match.currentStep = 3;
       await this.matchRepo.save(match);
     } else {
       await this.matchRepo.save(
@@ -213,7 +215,7 @@ export class InterestsService {
           matchedUserId: saved.toUserId,
           matchPercentage: 0,
           status: 'connected',
-          currentStep: 1,
+          currentStep: 3,
         }),
       );
     }
