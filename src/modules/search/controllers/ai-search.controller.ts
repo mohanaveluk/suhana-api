@@ -18,8 +18,6 @@ import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
 
 @ApiTags('AI Search')
-@ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('search')
 export class AiSearchController {
   constructor(
@@ -202,6 +200,8 @@ export class AiSearchController {
 
   // POST /api/v1/search/save-search
   @Post('save-search')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: 'Save a search for later',
     description:

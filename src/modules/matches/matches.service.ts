@@ -280,7 +280,7 @@ export class MatchesService {
 
   async getMatchesByUsers(userId: string, matchedUserId: string) {
     const match = await this.matchRepo.findOne({
-      where: { userId, matchedUserId },
+      where: [{ userId: userId, matchedUserId: matchedUserId }, { userId: matchedUserId, matchedUserId: userId }],
       relations: ['matchedUser', 'matchedUser.profile', 'matchedUser.profile.photos'],
       order: { suggestedAt: 'DESC' },
     });
