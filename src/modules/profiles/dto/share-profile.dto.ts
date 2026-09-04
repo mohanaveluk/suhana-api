@@ -1,7 +1,20 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsEmail, IsNotEmpty, IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
+import { IsArray, IsBoolean, IsEmail, IsNotEmpty, IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
 
 export class ShareProfileDto {
+
+  @ApiProperty({ description: 'ID of the profile to share', example: 'abc123' })
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(100)
+  profileId?: string;
+
+  @ApiProperty({ description: 'Profile code of the profile to share', example: 'XYZ789' })
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(100)
+  profileCode?: string;
+
   @ApiProperty({ description: 'Name of the recipient', example: 'Priya' })
   @IsNotEmpty()
   @IsString()
@@ -29,4 +42,9 @@ export class ShareProfileDto {
   @IsString()
   @MaxLength(1000)
   body?: string;
+
+  @ApiProperty({ description: 'Flag to indicate if the email should be sent as a preview', example: false, default: false })
+  @IsOptional()
+  @IsBoolean()
+  preview?: boolean;
 }

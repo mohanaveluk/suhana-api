@@ -1814,7 +1814,7 @@ export const feedbackReplyTemplate = (params: {
 //                    quoted note; if omitted, a warm default is used)
 //    domain        — used for footer support link
 // ─────────────────────────────────────────────────────────────────────────────
-export const shareProfileEmailTemplate = (params: {
+export const shareProfileEmailTemplate2 = (params: {
   senderName:    string;
   receiverName:  string;
   profileUrl:    string;

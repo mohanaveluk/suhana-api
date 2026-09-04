@@ -9,7 +9,7 @@ import { url } from 'inspector/promises';
 import { LookupService } from '../lookup/lookup.service';
 import { CustomLoggerService } from '../logger/custom-logger.service';
 import { EmailService } from 'src/shared/email/email.service';
-import { shareProfileEmailTemplate, verifyEmailTemplate } from 'src/shared/email/templates/verify-email-template';
+import { verifyEmailTemplate } from 'src/shared/email/templates/verify-email-template';
 import { ShareProfileDto } from './dto/share-profile.dto';
 import { EmailType } from '../email-history/entity/email-history.entity';
 import { AuditEmitter } from '../audit/audit.emitter';
@@ -17,6 +17,7 @@ import { AuditEventType } from '../audit/enums/audit-event-type.enum';
 import { AuditEntityType } from '../audit/enums/audit-entity-type.enum';
 import { VoiceUploadService } from '../media/voice-upload.service';
 import { DateService } from 'src/shared/services/date.service';
+import { shareProfileEmailTemplate, ShareProfileParams } from 'src/shared/email/templates/share-profile.email.template';
 
 
 @Injectable()
@@ -455,9 +456,13 @@ export class ProfilesService {
     return { message: 'Horoscope document uploaded successfully', url };
   }
 
-  async shareProfile(userId: string, dto: ShareProfileDto, domain: string): Promise<{ message: string }> {
-    const user = await this.userRepo.findOne({ where: { id: userId } });
+  async shareProfile(userId: string, dto: ShareProfileDto, domain: string): Promise<{ message: string; data?: string }> {
+    const user = await this.userRepo.findOne({ where: { id: userId }});
     if (!user) throw new NotFoundException('User not found');
+    const profile = await this.profileRepo.findOne({ where: [{ id: dto.profileId  }, {profileCode: dto.profileCode}]  });
+    if (!profile) throw new NotFoundException('Profile not found');
+
+    const profileInfo = this.buildSharedProfileInfo(profile);
 
     const senderName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'A Aurora member';
     const subject = dto.subject ?? `${senderName} wants to share a profile with you on Aurora Matrimony`;
@@ -468,13 +473,89 @@ export class ProfilesService {
       subject: dto.subject,
       body: dto.body,
       domain,
+      profile: profileInfo,
     });
+
+    if (dto.preview) {
+      return { data: html, message: 'Profile preview generated successfully' };
+    }
 
     await this.emailService.sendEmail({ to: dto.toEmail, subject, html });
     return { message: 'Profile shared successfully' };
   }
 
-async shareProfileByGuest(userId: string, dto: ShareProfileDto, domain: string): Promise<{ message: string }> {
+  /**
+   * Maps a stored Profile onto the shape shareProfileEmailTemplate expects.
+   * Every field but `name` is optional — the template hides empty rows and drops
+   * whole sections (Horoscope, Family) when they have nothing to show, so
+   * `undefined` is the right value for anything the member hasn't filled in.
+   */
+  private buildSharedProfileInfo(profile: Profile): ShareProfileParams['profile'] {
+    const fullName =
+      [profile.firstName, profile.lastName].filter(Boolean).join(' ') || 'A Suhana member';
+
+    // Primary active photo, falling back to the first active one.
+    const activePhotos = (profile.photos ?? []).filter((ph) => Number(ph.isActive) === 1);
+    const primaryPhoto = activePhotos.find((ph) => ph.isPrimary) ?? activePhotos[0];
+
+    const location = [profile.city, profile.state].filter(Boolean).join(', ');
+    const education = [profile.educationLevel, profile.educationField].filter(Boolean).join(', ');
+
+    const siblingCount = profile.siblings;
+    const siblings =
+      siblingCount === null || siblingCount === undefined
+        ? undefined
+        : `${siblingCount} sibling${Number(siblingCount) === 1 ? '' : 's'}`;
+
+    const horoscope = profile.horoscope ?? {};
+
+    return {
+      photoUrl: primaryPhoto?.variants?.displayUrl ?? primaryPhoto?.url ?? undefined,
+      name: fullName,
+      dateOfBirth: this.formatShareDate(profile.dateOfBirth),
+      age: profile.age ?? undefined,
+      height: profile.height ?? undefined,
+      religion: profile.religion ?? undefined,
+      caste: profile.caste ?? undefined,
+      occupation: profile.occupationTitle ?? undefined,
+      annualIncome: profile.annualIncome ?? undefined,
+      education: education || undefined,
+      motherTongue: profile.motherTongue ?? undefined,
+      city: location || undefined,
+      country: profile.country ?? undefined,
+      willingToRelocate: profile.willingToRelocate ? 'Yes' : 'No',
+
+      // Horoscope — section auto-hides if all three are undefined.
+      rasi: horoscope.rashi ?? undefined,
+      nakshatra: horoscope.nakshatra ?? undefined,
+      manglik: horoscope.manglikStatus ?? undefined,
+
+      // Family — section auto-hides if all four are undefined.
+      fatherOccupation: profile.fatherOccupation ?? undefined,
+      motherOccupation: profile.motherOccupation ?? undefined,
+      siblings,
+      familyNote: profile.familyPreferenceNote ?? undefined,
+    };
+  }
+
+  /** "1993-09-21" | Date -> "21 Sep 1993". UTC-based so a date-only column never shifts a day. */
+  private formatShareDate(value?: Date | string | null): string | undefined {
+    if (!value) return undefined;
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return undefined;
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+  }
+
+async shareProfileByGuest(userId: string, dto: ShareProfileDto, domain: string): Promise<{ message: string; data?: string }> {
+  
+    const profile = await this.profileRepo.findOne({ where: [{ id: dto.profileId  }, {profileCode: dto.profileCode}]  });
+    if (!profile) throw new NotFoundException('Profile not found');
+
+    const profileInfo = this.buildSharedProfileInfo(profile);
 
     const senderName = userId;
     const subject = dto.subject ?? `${senderName} wants to share a profile with you on Aurora Matrimony`;
@@ -485,8 +566,13 @@ async shareProfileByGuest(userId: string, dto: ShareProfileDto, domain: string):
       subject: dto.subject,
       body: dto.body,
       domain,
+      profile: profileInfo
     });
 
+    if (dto.preview) {
+      return { data: html, message: 'Profile preview generated successfully' };
+    }
+    
     await this.emailService.sendEmail({ to: dto.toEmail, subject, html });
     return { message: 'Profile shared successfully' };
   }
