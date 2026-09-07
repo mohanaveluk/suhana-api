@@ -284,6 +284,9 @@ export class MatchesService {
       relations: ['matchedUser', 'matchedUser.profile', 'matchedUser.profile.photos'],
       order: { suggestedAt: 'DESC' },
     });
+    if(!match)
+      throw new NotFoundException('Match not found');
+
     return this.formatMatch(match);
   }
 
