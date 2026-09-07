@@ -14,10 +14,12 @@ import { AuditModule } from '../audit/audit.module';
 // before it is attached to their profile.
 import { MediaModule } from '../media/media.module';
 import { DateService } from 'src/shared/services/date.service';
+// Provides ProfileVisitsService — GET /profiles/:id records a visit.
+import { ProfileVisitsModule } from '../profile-visits/profile-visits.module';
 
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Profile, ProfilePhoto, User]), LookupModule, LogModule, EmailModule, AuditModule, MediaModule],
+  imports: [TypeOrmModule.forFeature([Profile, ProfilePhoto, User]), LookupModule, LogModule, EmailModule, AuditModule, MediaModule, ProfileVisitsModule],
   controllers: [ProfilesController],
   providers: [ProfilesService, CloudStorageService, DateService,],
   exports: [ProfilesService],

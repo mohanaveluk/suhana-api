@@ -40,6 +40,7 @@ import { SafetyTipsModule } from './modules/safety-tips/safety-tips.module';
 import { TestimonialsModule } from './modules/testimonials/testimonials.module';
 import { MediaModule } from './modules/media/media.module';
 import { SearchModule } from './modules/search/search.module';
+import { ProfileVisitsModule } from './modules/profile-visits/profile-visits.module';
 
 const envFilePath = process.env.NODE_ENV === 'production'
   ? '.env'
@@ -89,6 +90,7 @@ const envFilePath = process.env.NODE_ENV === 'production'
     TestimonialsModule,
     MediaModule,
     SearchModule,
+    ProfileVisitsModule,
   ],
   controllers: [AppController],
   providers: [

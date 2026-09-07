@@ -17,6 +17,8 @@ import {
   SetVoiceIntroductionDto, VoiceIntroductionResponseDto,
 } from './dto/voice-introduction.dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from 'src/common/guards/optional-jwt-auth.guard';
+import { ProfileVisitsService } from '../profile-visits/profile-visits.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { maxFileSize } from 'src/shared/utils/file-validation.util';
@@ -24,7 +26,10 @@ import { maxFileSize } from 'src/shared/utils/file-validation.util';
 @ApiTags('profiles')
 @Controller('profiles')
 export class ProfilesController {
-  constructor(private readonly profilesService: ProfilesService) {}
+  constructor(
+    private readonly profilesService: ProfilesService,
+    private readonly profileVisitsService: ProfileVisitsService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Search and list profiles with filters' })
@@ -63,11 +68,22 @@ export class ProfilesController {
   
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get profile by ID' })
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Get profile by ID',
+    description:
+      'Public endpoint. When called with a valid Bearer token, the view is recorded ' +
+      'in the caller\'s "recently visited" list. Guests and members viewing their own ' +
+      'profile are not recorded.',
+  })
   @ApiResponse({ status: 200, description: 'Profile found' })
   @ApiResponse({ status: 404, description: 'Profile not found' })
-  findById(@Param('id') id: string) {
-    return this.profilesService.findById(id);
+  async findById(@Request() req: any, @Param('id') id: string) {
+    const profile = await this.profilesService.findById(id);
+    // Fire-and-forget: recording a visit must never delay or fail the response.
+    void this.profileVisitsService.recordVisit(req.user?.id, id);
+    return profile;
   }
 
   @Get('code/:id')
