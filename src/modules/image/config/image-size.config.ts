@@ -6,7 +6,7 @@ export interface ImageVariantConfig {
 }
 
 export const IMAGE_VARIANTS: ImageVariantConfig[] = [
-  { suffix: 'original', width: null, height: null, quality: 90 },
+  { suffix: 'original', width: 1200, height: 1200, quality: 90 },
   { suffix: 'display', width: 600, height: 600, quality: 85 },
   { suffix: 'thumbnail', width: 250, height: 250, quality: 80 },
 ];
