@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
+import { OnEvent } from '@nestjs/event-emitter';
 import Anthropic from '@anthropic-ai/sdk';
 import { HoroscopeCompatibilityReport, Match, Profile, User, UserSubscription } from '../user/entity';
 import { Interest } from '../interests/entity/interest.entity';
@@ -9,6 +10,9 @@ import { scoreAgeGap, scoreIncome, scoreMotherTongue, computeCompatibilityRules,
 import { Badge } from 'src/shared/matches/matches.model';
 import { InterestsService } from '../interests/interests.service';
 import { AuditLogService } from '../audit/audit-log.service';
+import { CustomLoggerService } from '../logger/custom-logger.service';
+import { AUDIT_EVENT, AuditEventPayload } from '../audit/audit.event';
+import { AuditEventType } from '../audit/enums/audit-event-type.enum';
 import { match } from 'assert';
 
 type TextBlock = Anthropic.Messages.TextBlock;
@@ -30,6 +34,7 @@ export class MatchesService {
     @InjectRepository(HoroscopeCompatibilityReport) private readonly horoscopeReportRepo: Repository<HoroscopeCompatibilityReport>,
     private readonly interestService: InterestsService,
     private readonly auditLogService: AuditLogService,
+    private readonly logger: CustomLoggerService,
     private readonly anthropic: Anthropic,
   ) {}
 
@@ -387,6 +392,7 @@ export class MatchesService {
           userTwoDateOfBirth: userTwoHoroscope.dateOfBirth,
           userTwoTimeOfBirth: userTwoHoroscope.timeOfBirth,
           userTwoPlaceOfBirth: userTwoHoroscope.placeOfBirth,
+          isActive: true,
         },
         {
           userOneId: matchedUserId,
@@ -397,9 +403,60 @@ export class MatchesService {
           userTwoDateOfBirth: userOneHoroscope.dateOfBirth,
           userTwoTimeOfBirth: userOneHoroscope.timeOfBirth,
           userTwoPlaceOfBirth: userOneHoroscope.placeOfBirth,
+          isActive: true,
         },
       ],
     });
+  }
+
+  // ─── Horoscope cache invalidation ──────────────────────────────────────────
+
+  /**
+   * Rides the existing profile-update audit event rather than a bespoke one —
+   * ProfilesService.update() already emits PROFILE_UPDATED with before/after
+   * snapshots for every changed field, horoscopeDocUrl included.
+   *
+   * Reacts only when that specific field actually changed: a cached compatibility
+   * report was generated from the previous document, so once it's replaced every
+   * report involving this member is stale and must not be served again — the next
+   * getAIMatchesByUsers call will regenerate it.
+   *
+   * Async + best-effort: a failure here must never surface against the profile
+   * update request that triggered it, and every other profile edit is a cheap
+   * no-op (two property reads) rather than a cache hit.
+   */
+  @OnEvent(AUDIT_EVENT, { async: true })
+  async handleProfileAuditEvent(payload: AuditEventPayload): Promise<void> {
+    if (payload.eventType !== AuditEventType.PROFILE_UPDATED || !payload.userId) return;
+
+    const previousDocUrl = payload.oldValue?.horoscopeDocUrl ?? null;
+    const newDocUrl = payload.newValue?.horoscopeDocUrl ?? null;
+    if (previousDocUrl === newDocUrl) return;
+
+    try {
+      await this.invalidateHoroscopeCache(payload.userId);
+    } catch (err) {
+      this.logger.error(
+        `invalidateHoroscopeCache failed for user ${payload.userId}: ${err instanceof Error ? err.message : String(err)}`,
+        MatchesService.name,
+      );
+    }
+  }
+
+  /**
+   * Marks every active cached report involving `userId` (on either side of the
+   * pair) as inactive. findCachedReport only ever matches isActive = true rows,
+   * so this effectively forces a fresh AI evaluation on the next request without
+   * destroying the stale report's audit trail.
+   */
+  async invalidateHoroscopeCache(userId: string): Promise<void> {
+    await this.horoscopeReportRepo
+      .createQueryBuilder()
+      .update(HoroscopeCompatibilityReport)
+      .set({ isActive: false, invalidatedAt: new Date() })
+      .where('isActive = :isActive', { isActive: true })
+      .andWhere('(userOneId = :userId OR userTwoId = :userId)', { userId })
+      .execute();
   }
 
   private extractHoroscopeData(profile: Profile) {
@@ -477,6 +534,18 @@ Manglik Status  : ${userTwo.manglikStatus ?? 'Not provided'}
 Horoscope Doc   : ${userTwo.documentUrl ? 'Uploaded' : 'Not uploaded'}
 
 === INSTRUCTIONS ===
+The Horoscope Doc image/pdf contains two horoscope charts:
+
+1. RASI chart (ராசி)
+2. NAVAMSAM / AMSAM chart (நவாம்சம்)
+
+Tasks:
+
+1. Locate both horoscope charts.
+2. Read all Tamil, English, or mixed-language planet names inside each box.
+3. Identify the planet abbreviations and convert them to English names.
+4. Record the positions of all planets in both the RASI and NAVAMSAM charts.
+5. Note any special configurations or yogas present in the charts.
 
 FEATURE 1 — Horoscope Generation:
 Generate Birth Chart, Navamsa Chart, Lagna, Rasi, Nakshatra, and all 9 planet positions for each person.
@@ -609,23 +678,29 @@ Return ONLY this JSON structure (fill every field — do not omit any key):
   "finalRecommendation": { "category": "", "justification": "" }
 }`;
 
-    const response = await this.anthropic.messages.create({
-      model: 'claude-sonnet-4-5',
-      max_tokens: 8192,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    });
-
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
     try {
-      let content = text
-        .replace(/^```json\s*/i, '')
-        .replace(/```$/i, '')
-        .trim();      
-      return JSON.parse(content);
-    } catch {
-      return { raw: text };
-    }
+      const response = await this.anthropic.messages.create({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 8192,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      });
+
+      const text =
+        response.content[0].type === 'text' ? response.content[0].text : '';
+      try {
+        let content = text
+          .replace(/^```json\s*/i, '')
+          .replace(/```$/i, '')
+          .trim();
+        return JSON.parse(content);
+      } catch {
+        return { raw: text };
+      }
+    } catch (error) {
+      console.error('Error occurred while creating the message:', error);
+      //this.logger.error('Error occurred while creating the message:', error);
+    }    
   }
 
 
