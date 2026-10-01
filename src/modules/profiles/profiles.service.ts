@@ -65,6 +65,9 @@ export class ProfilesService {
       familyValues: profile.familyValues,
       aboutMe: profile.aboutMe,
       voiceIntroductionUrl: profile.voiceIntroductionUrl,
+      // Tracked so a document swap is visible in the audit diff — MatchesService
+      // listens for exactly this field to invalidate cached AI horoscope reports.
+      horoscopeDocUrl: profile.horoscopeDocUrl,
     };
   }
 

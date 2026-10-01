@@ -34,6 +34,16 @@ export class HoroscopeCompatibilityReport {
   @Column({ type: 'json' })
   report: Record<string, any>;
 
+  // Invalidated (rather than deleted) when either member replaces their horoscope
+  // document — see MatchesService.invalidateHoroscopeCache. Keeping the row lets
+  // the stale report stay available for audit/debugging while findCachedReport
+  // ignores it and a fresh one gets generated.
+  @Column({ default: true, name: 'is_active' })
+  isActive: boolean;
+
+  @Column({ type: 'datetime', nullable: true, name: 'invalidated_at' })
+  invalidatedAt: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 }
