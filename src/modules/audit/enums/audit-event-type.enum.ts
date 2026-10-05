@@ -57,6 +57,9 @@ export enum AuditEventType {
   MATCH_FIXED = 'MATCH_FIXED',
   MATCH_FIXED_CANCELLED = 'MATCH_FIXED_CANCELLED',
 
+  // ── Personality assessment ───────────────────────────────────────────────
+  PERSONALITY_ASSESSMENT_COMPLETED = 'PERSONALITY_ASSESSMENT_COMPLETED',
+
   // ── Communication ────────────────────────────────────────────────────────
   CHAT_STARTED = 'CHAT_STARTED',
   MESSAGE_SENT = 'MESSAGE_SENT',
