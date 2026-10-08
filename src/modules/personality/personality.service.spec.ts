@@ -494,4 +494,46 @@ describe('PersonalityService', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
+
+  describe('getPersonalityTypes', () => {
+    const mockRows = (rows: { profileId: string; personalityType: string }[]) => {
+      const qb = {
+        select: jest.fn().mockReturnThis(),
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue(rows),
+      };
+      assessmentRepo.createQueryBuilder = jest.fn(() => qb);
+      return qb;
+    };
+
+    it('maps each profile to its newest completed type in one query', async () => {
+      // Rows arrive newest-first; profile-a retook the assessment.
+      const qb = mockRows([
+        { profileId: 'profile-a', personalityType: 'ENFP' },
+        { profileId: 'profile-b', personalityType: 'ISTJ' },
+        { profileId: 'profile-a', personalityType: 'INFP' },
+      ]);
+
+      const types = await service.getPersonalityTypes(['profile-a', 'profile-b', 'profile-c', 'profile-a']);
+
+      expect(assessmentRepo.createQueryBuilder).toHaveBeenCalledTimes(1);
+      expect(qb.andWhere).toHaveBeenCalledWith('a.profileId IN (:...ids)', {
+        ids: ['profile-a', 'profile-b', 'profile-c'],
+      });
+      expect(qb.orderBy).toHaveBeenCalledWith('a.completedDate', 'DESC');
+      expect(types.get('profile-a')).toBe('ENFP');
+      expect(types.get('profile-b')).toBe('ISTJ');
+      expect(types.has('profile-c')).toBe(false);
+    });
+
+    it('skips the query when there are no profile ids', async () => {
+      assessmentRepo.createQueryBuilder = jest.fn();
+      const types = await service.getPersonalityTypes([]);
+      expect(types.size).toBe(0);
+      expect(assessmentRepo.createQueryBuilder).not.toHaveBeenCalled();
+    });
+  });
 });

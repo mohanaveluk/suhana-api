@@ -16,10 +16,12 @@ import { MediaModule } from '../media/media.module';
 import { DateService } from 'src/shared/services/date.service';
 // Provides ProfileVisitsService — GET /profiles/:id records a visit.
 import { ProfileVisitsModule } from '../profile-visits/profile-visits.module';
+// Provides PersonalityService — search results carry each profile's personality type.
+import { PersonalityModule } from '../personality/personality.module';
 
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Profile, ProfilePhoto, User]), LookupModule, LogModule, EmailModule, AuditModule, MediaModule, ProfileVisitsModule],
+  imports: [TypeOrmModule.forFeature([Profile, ProfilePhoto, User]), LookupModule, LogModule, EmailModule, AuditModule, MediaModule, ProfileVisitsModule, PersonalityModule],
   controllers: [ProfilesController],
   providers: [ProfilesService, CloudStorageService, DateService,],
   exports: [ProfilesService],
