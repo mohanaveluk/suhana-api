@@ -300,6 +300,36 @@ export class PersonalityService {
     });
   }
 
+  /**
+   * Current personality type for many profiles in one query (profileId → type),
+   * for list views such as search results. Profiles that haven't completed the
+   * assessment are simply absent from the map. Served by
+   * IDX_PERSONALITY_ASSESSMENTS_PROFILE_STATUS.
+   */
+  async getPersonalityTypes(profileIds: string[]): Promise<Map<string, string>> {
+    const ids = [...new Set(profileIds.filter(Boolean))];
+    const types = new Map<string, string>();
+    if (ids.length === 0) return types;
+
+    const rows: { profileId: string; personalityType: string }[] =
+      await this.assessmentRepo
+        .createQueryBuilder('a')
+        .select('a.profileId', 'profileId')
+        .addSelect('a.personalityType', 'personalityType')
+        .where('a.status = :status', { status: AssessmentStatus.COMPLETED })
+        .andWhere('a.profileId IN (:...ids)', { ids })
+        .orderBy('a.completedDate', 'DESC')
+        .getRawMany();
+
+    // Newest first, so the first row per profile is its current result (retakes).
+    for (const row of rows) {
+      if (row.personalityType && !types.has(row.profileId)) {
+        types.set(row.profileId, row.personalityType);
+      }
+    }
+    return types;
+  }
+
   // ─── Internals ─────────────────────────────────────────────────────────────
 
   private async getActiveQuestions(): Promise<PersonalityQuestion[]> {

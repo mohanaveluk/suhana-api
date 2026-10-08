@@ -17,6 +17,7 @@ import {
 import { ParsedIntentResult, SearchIntent } from '../models/search-intent.model';
 import { CONFIDENCE_THRESHOLD, IntentSource } from '../enums/search.enums';
 import { CustomLoggerService } from '../../logger/custom-logger.service';
+import { PersonalityService } from '../../personality/personality.service';
 import { profile } from 'console';
 
 export interface SearchContext {
@@ -52,7 +53,30 @@ export class AiSearchService {
     private readonly analytics: SearchAnalyticsService,
     @Inject(AI_INTENT_PROVIDER) private readonly aiProvider: AiIntentProvider,
     private readonly logger: CustomLoggerService,
+    private readonly personalityService: PersonalityService,
   ) {}
+
+  /**
+   * Fills `personalityType` on result rows with one batched lookup.
+   * Signed-in callers only (personality data is members-only); best-effort, so
+   * a lookup failure never fails the search.
+   */
+  private async withPersonalityTypes(
+    results: SearchProfileResultDto[],
+    ctx: SearchContext,
+  ): Promise<SearchProfileResultDto[]> {
+    if (!ctx.userId || results.length === 0) return results;
+    try {
+      const types = await this.personalityService.getPersonalityTypes(results.map((r) => r.profileId));
+      return results.map((r) => ({ ...r, personalityType: types.get(r.profileId) ?? null }));
+    } catch (err) {
+      this.logger.error(
+        `Personality types lookup failed for AI search: ${err instanceof Error ? err.message : String(err)}`,
+        AiSearchService.name,
+      );
+      return results;
+    }
+  }
 
   // ─── Main entry point ──────────────────────────────────────────────────────
 
@@ -105,7 +129,7 @@ export class AiSearchService {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
-      profiles: filtered.map((r) => this.toResultDto(r)),
+      profiles: await this.withPersonalityTypes(filtered.map((r) => this.toResultDto(r)), ctx),
       suggestions: this.buildSuggestions(parsed.intent, total),
       corrections: parsed.corrections,
       searchTimeMs,
@@ -268,7 +292,7 @@ export class AiSearchService {
       page: 1,
       limit,
       totalPages: 1,
-      profiles: ranked.map((r) => this.toResultDto(r)),
+      profiles: await this.withPersonalityTypes(ranked.map((r) => this.toResultDto(r)), ctx),
       suggestions: [],
       corrections: {},
       searchTimeMs,

@@ -60,6 +60,13 @@ export class SearchProfileResultDto {
   @ApiPropertyOptional({ example: 'SUH-00123' })
   profileCode: string | null;
 
+  @ApiPropertyOptional({
+    example: 'INFJ',
+    nullable: true,
+    description: 'Aurora Personality Assessment type; null when not taken. Only filled for signed-in callers.',
+  })
+  personalityType?: string | null;
+
   @ApiProperty({ example: 'Nandhini' })
   firstName: string;
 

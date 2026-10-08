@@ -18,6 +18,7 @@ import { AuditEntityType } from '../audit/enums/audit-entity-type.enum';
 import { VoiceUploadService } from '../media/voice-upload.service';
 import { DateService } from 'src/shared/services/date.service';
 import { shareProfileEmailTemplate, ShareProfileParams } from 'src/shared/email/templates/share-profile.email.template';
+import { PersonalityService } from '../personality/personality.service';
 
 
 @Injectable()
@@ -33,6 +34,7 @@ export class ProfilesService {
     private auditEmitter: AuditEmitter,
     private voiceUploadService: VoiceUploadService,
     private dateService: DateService,
+    private personalityService: PersonalityService,
   ) {}
 
   // Scalar profile fields worth tracking for the audit trail / change detection.
@@ -130,8 +132,13 @@ export class ProfilesService {
       }
     });    
 
+    const isAuthenticated = search.isAuthenticated === 'true';
+    const profiles = isAuthenticated
+      ? await this.withPersonalityTypes(data, data.map((p) => this.toProfileResponse(p)))
+      : data.map((p) => this.toUAProfileResponse(p));
+
     return {
-      profiles: search.isAuthenticated === 'true' ? data.map((p) => this.toProfileResponse(p)) : data.map((p) => this.toUAProfileResponse(p)),
+      profiles,
       total,
       page,
       limit,
@@ -140,6 +147,27 @@ export class ProfilesService {
   }
 
 
+
+  /**
+   * Adds `personalityType` (e.g. 'INFJ', or null) to each list item with one
+   * batched lookup. Best-effort: a failure leaves the results untouched rather
+   * than failing the search. Members-only, like the personality endpoints.
+   */
+  private async withPersonalityTypes<T extends object>(
+    source: Profile[],
+    responses: T[],
+  ): Promise<(T & { personalityType: string | null })[]> {
+    let types = new Map<string, string>();
+    try {
+      types = await this.personalityService.getPersonalityTypes(source.map((p) => p.id));
+    } catch (err) {
+      this.logger.error(
+        `Personality types lookup failed for search results: ${err instanceof Error ? err.message : String(err)}`,
+        ProfilesService.name,
+      );
+    }
+    return responses.map((r, i) => ({ ...r, personalityType: types.get(source[i].id) ?? null }));
+  }
 
   async findById(id: string) {
     const profile = await this.profileRepo.findOne({

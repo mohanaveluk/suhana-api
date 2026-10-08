@@ -24,6 +24,8 @@ import { ClaudeSearchIntentService } from './ai-fallback/claude-search-intent.se
 import { AI_INTENT_PROVIDER } from './ai-fallback/ai-intent-provider.interface';
 
 import { LogModule } from '../logger/log.module';
+// Provides PersonalityService — result rows carry each profile's personality type.
+import { PersonalityModule } from '../personality/personality.module';
 
 /**
  * AI Search.
@@ -41,6 +43,7 @@ import { LogModule } from '../logger/log.module';
     TypeOrmModule.forFeature([Profile, User, Match, SearchHistory, SavedSearch]),
     LogModule,
     ConfigModule,
+    PersonalityModule,
   ],
   controllers: [AiSearchController, AdminSearchAnalyticsController],
   providers: [
