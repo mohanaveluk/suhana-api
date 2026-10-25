@@ -30,7 +30,7 @@ export class User {
   @Column({ type: 'enum', enum: ['bride', 'groom'] })
   gender: string;
 
-  @Column({ type: 'enum', enum: ['free', 'silver', 'gold', 'platinum'], default: 'free' })
+  @Column({ type: 'enum', enum: ['free', 'silver', 'gold', 'platinum'], default: 'platinum' })
   membership: string;
 
   @Column({ default: false })

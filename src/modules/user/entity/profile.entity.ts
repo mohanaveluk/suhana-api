@@ -60,6 +60,13 @@ export class Profile {
   @Column({ default: false })
   willingToRelocate: boolean;
 
+  // Street address — private: only returned to authenticated callers.
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  addressLine1: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  addressLine2: string;
+
   // Education
   @Column()
   educationLevel: string;
@@ -105,6 +112,20 @@ export class Profile {
   @Column({ nullable: true })
   motherOccupation: string;
 
+  // Free-text family names (private: authenticated callers only).
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  fatherName: string;
+
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  motherName: string;
+
+  // Free text, e.g. "2 (1 married)" — a description, not a count like `siblings`.
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  brothers: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  sisters: string;
+
   @Column({ nullable: true })
   siblings: number;
 
@@ -148,6 +169,8 @@ export class Profile {
     placeOfBirth?: string;
     rashi?: string;
     nakshatra?: string;
+    lagna?: string;
+    tossing?: string;
     manglikStatus?: string;
     documentUrl?: string;
   };

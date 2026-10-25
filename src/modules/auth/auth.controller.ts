@@ -244,7 +244,7 @@ export class AuthController {
   }
 
   
-@Post('update-password-legacy')
+  @Post('update-password-legacy')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update user password' })
