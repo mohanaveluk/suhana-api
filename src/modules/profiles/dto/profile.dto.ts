@@ -24,6 +24,14 @@ export class LocationDto {
   @ApiPropertyOptional({ example: false })
   @IsOptional() @IsBoolean()
   willingToRelocate?: boolean;
+
+  @ApiPropertyOptional({ example: '12, Gandhi Street' })
+  @IsOptional() @IsString() @MaxLength(255)
+  addressLine1?: string;
+
+  @ApiPropertyOptional({ example: 'Anna Nagar' })
+  @IsOptional() @IsString() @MaxLength(255)
+  addressLine2?: string;
 }
 
 export class EducationDto {
@@ -70,6 +78,22 @@ export class FamilyDetailsDto {
   @ApiPropertyOptional({ example: 'Retired' })
   @IsOptional() @IsString()
   motherOccupation?: string;
+
+  @ApiPropertyOptional({ example: 'Ramesh Kumar' })
+  @IsOptional() @IsString() @MaxLength(150)
+  fatherName?: string;
+
+  @ApiPropertyOptional({ example: 'Lakshmi Devi' })
+  @IsOptional() @IsString() @MaxLength(150)
+  motherName?: string;
+
+  @ApiPropertyOptional({ example: '1 elder brother (married)' })
+  @IsOptional() @IsString() @MaxLength(255)
+  brothers?: string;
+
+  @ApiPropertyOptional({ example: '1 younger sister' })
+  @IsOptional() @IsString() @MaxLength(255)
+  sisters?: string;
   
   @ApiPropertyOptional({ example: '2' })
   @IsOptional() @IsNumber()
@@ -135,6 +159,14 @@ export class HoroscopeDto {
   @ApiPropertyOptional({ example: 'Ashwini' })
   @IsOptional() @IsString()
   nakshatra?: string;
+
+  @ApiPropertyOptional({ example: 'Simha' })
+  @IsOptional() @IsString() @MaxLength(100)
+  lagna?: string;
+
+  @ApiPropertyOptional({ example: 'Dhanus' })
+  @IsOptional() @IsString() @MaxLength(100)
+  tossing?: string;
 
   @ApiPropertyOptional({ example: 'No' })
   @IsOptional() @IsString()

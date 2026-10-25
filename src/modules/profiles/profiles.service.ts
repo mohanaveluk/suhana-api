@@ -65,6 +65,12 @@ export class ProfilesService {
       motherOccupation: profile.motherOccupation,
       siblings: profile.siblings,
       familyValues: profile.familyValues,
+      addressLine1: profile.addressLine1,
+      addressLine2: profile.addressLine2,
+      fatherName: profile.fatherName,
+      motherName: profile.motherName,
+      brothers: profile.brothers,
+      sisters: profile.sisters,
       aboutMe: profile.aboutMe,
       voiceIntroductionUrl: profile.voiceIntroductionUrl,
       // Tracked so a document swap is visible in the audit diff — MatchesService
@@ -302,6 +308,13 @@ export class ProfilesService {
       user.profile.state = dto.location?.state || user.profile.state;
       user.profile.country = dto.location?.country || user.profile.country;
       user.profile.willingToRelocate = dto.location?.willingToRelocate ?? user.profile.willingToRelocate;
+      // Optional free-text fields: an explicit empty string clears the value, undefined leaves it untouched.
+      user.profile.addressLine1 = this.optionalText(dto.location?.addressLine1, user.profile.addressLine1);
+      user.profile.addressLine2 = this.optionalText(dto.location?.addressLine2, user.profile.addressLine2);
+      user.profile.fatherName = this.optionalText(dto.familyDetails?.fatherName, user.profile.fatherName);
+      user.profile.motherName = this.optionalText(dto.familyDetails?.motherName, user.profile.motherName);
+      user.profile.brothers = this.optionalText(dto.familyDetails?.brothers, user.profile.brothers);
+      user.profile.sisters = this.optionalText(dto.familyDetails?.sisters, user.profile.sisters);
       user.profile.height = dto.height || user.profile.height;
       user.profile.weight = dto.weight || user.profile.weight;
       user.profile.preferences.ageRange.min = dto.preferences?.ageRange?.min || user.profile.preferences.ageRange.min;
@@ -319,6 +332,8 @@ export class ProfilesService {
         placeOfBirth: dto.horoscope?.placeOfBirth || user.profile.horoscope?.placeOfBirth,
         rashi: dto.horoscope?.rashi || user.profile.horoscope?.rashi,
         nakshatra: dto.horoscope?.nakshatra || user.profile.horoscope?.nakshatra,
+        lagna: this.optionalText(dto.horoscope?.lagna, user.profile.horoscope?.lagna),
+        tossing: this.optionalText(dto.horoscope?.tossing, user.profile.horoscope?.tossing),
         manglikStatus: dto.horoscope?.manglikStatus || user.profile.horoscope?.manglikStatus,
         documentUrl: dto.horoscope?.documentUrl || user.profile.horoscope?.documentUrl,
       };
@@ -714,6 +729,13 @@ async shareProfileByGuest(userId: string, dto: ShareProfileDto, domain: string):
   }
 
   // Masks sensitive information in the email address.
+  /** undefined = not sent (keep current); string = trimmed value, '' clears to null. */
+  private optionalText(incoming: string | undefined | null, current: string | undefined | null): string | null {
+    if (incoming === undefined) return current ?? null;
+    if (incoming === null) return null;
+    return incoming.trim() || null;
+  }
+
   private mask(email: string): string {
     if (!email || email.length < 6) return '***';
     const [localPart, domain] = email.split('@');
@@ -777,6 +799,8 @@ async shareProfileByGuest(userId: string, dto: ShareProfileDto, domain: string):
         state: profile.state,
         country: profile.country,
         willingToRelocate: profile.willingToRelocate,
+        addressLine1: profile.addressLine1 ?? null,
+        addressLine2: profile.addressLine2 ?? null,
       },
       education: {
         level: profile.educationLevel,
@@ -791,6 +815,10 @@ async shareProfileByGuest(userId: string, dto: ShareProfileDto, domain: string):
       },
       familyDetails: {
         familyType: profile.familyType,
+        fatherName: profile.fatherName ?? null,
+        motherName: profile.motherName ?? null,
+        brothers: profile.brothers ?? null,
+        sisters: profile.sisters ?? null,
         fatherOccupation: profile.fatherOccupation,
         motherOccupation: profile.motherOccupation,
         siblings: profile.siblings,

@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import { OnEvent } from '@nestjs/event-emitter';
 import Anthropic from '@anthropic-ai/sdk';
 import { HoroscopeCompatibilityReport, Match, Profile, User, UserSubscription } from '../user/entity';
@@ -51,18 +51,12 @@ export class MatchesService {
 
     const oppositeGender = user.gender === 'bride' ? 'groom' : 'bride';
 
-    const candidates = await this.profileRepo
-      .createQueryBuilder('p')
-      .leftJoinAndSelect('p.photos', 'photos')
-      .leftJoinAndSelect('p.user', 'u')
-      .where('p.gender = :gender', { gender: oppositeGender })
-      .andWhere('p.status = :status', { status: 'active' })
-      .andWhere('p.is_searchable = :isSearchable', { isSearchable: 1 })
-      .andWhere('u.id != :userId', { userId })
-      .andWhere('u.is_active = :ustatus', { ustatus: 1 })
-      .orderBy('RAND()')
-      .take(count)
-      .getMany();
+    const candidates = await this.pickCandidates(
+      userId,
+      oppositeGender,
+      user.profile.preferences,
+      count,
+    );
 
     // Single batch query — find which candidates already have a stored match record.
     // Guard the empty case: In([]) can behave oddly across drivers, and there is
@@ -136,6 +130,179 @@ export class MatchesService {
     return this.formatMatches(matchesWithRelations, interestStatusMap);
   }
 
+  /** Eligible opposite-gender candidates, excluding the requester. Unordered, unlimited. */
+  private baseCandidateQuery(
+    userId: string,
+    gender: string,
+  ): SelectQueryBuilder<Profile> {
+    return this.profileRepo
+      .createQueryBuilder('p')
+      .leftJoinAndSelect('p.photos', 'photos')
+      .leftJoinAndSelect('p.user', 'u')
+      .where('p.gender = :gender', { gender })
+      .andWhere('p.status = :status', { status: 'active' })
+      .andWhere('p.is_searchable = :isSearchable', { isSearchable: 1 })
+      .andWhere('u.id != :userId', { userId })
+      .andWhere('u.is_active = :ustatus', { ustatus: 1 });
+  }
+
+  /**
+   * Pick up to `count` candidates: members who satisfy the requester's saved partner
+   * preferences first (in random order), then random eligible members to fill any gap.
+   * Any preference that is missing/empty is simply not applied.
+   */
+  private async pickCandidates(
+    userId: string,
+    gender: string,
+    prefs: Profile['preferences'] | null | undefined,
+    count: number,
+  ): Promise<Profile[]> {
+    const picked: Profile[] = [];
+
+    const qb = this.baseCandidateQuery(userId, gender);
+    const applied = this.applyPreferenceFilters(qb, prefs);
+    const heightRange = this.parseHeightRange(prefs);
+
+    if (applied || heightRange) {
+      // Height is a free-text column ("5'7\"", "170 cm"), so it is checked in memory;
+      // over-fetch so that filtering it out still leaves enough rows.
+      const pool = await qb
+        .orderBy('RAND()')
+        .take(heightRange ? count * 6 : count)
+        .getMany();
+      for (const c of pool) {
+        if (picked.length >= count) break;
+        if (!heightRange || this.heightWithin(c.height, heightRange)) picked.push(c);
+      }
+    }
+
+    if (picked.length < count) {
+      const fill = this.baseCandidateQuery(userId, gender);
+      if (picked.length) {
+        fill.andWhere('p.id NOT IN (:...pickedIds)', {
+          pickedIds: picked.map((c) => c.id),
+        });
+      }
+      picked.push(
+        ...(await fill
+          .orderBy('RAND()')
+          .take(count - picked.length)
+          .getMany()),
+      );
+    }
+
+    return picked;
+  }
+
+  /** Adds a WHERE clause for every preference that is actually set. Returns whether any were applied. */
+  private applyPreferenceFilters(
+    qb: SelectQueryBuilder<Profile>,
+    prefs: Profile['preferences'] | null | undefined,
+  ): boolean {
+    if (!prefs) return false;
+    let applied = false;
+    // Text preferences are compared in normalised form on both sides, so
+    // "Master's" / "masters" / "MASTER" all line up with a stored "Master's".
+    const list = (v?: string[]) =>
+      Array.isArray(v)
+        ? [...new Set(v.map((x) => this.normalizePrefText(x)).filter(Boolean))]
+        : [];
+
+    const min = Number(prefs.ageRange?.min);
+    const max = Number(prefs.ageRange?.max);
+    if (Number.isFinite(min) && min > 0) {
+      qb.andWhere('p.age >= :prefAgeMin', { prefAgeMin: min });
+      applied = true;
+    }
+    if (Number.isFinite(max) && max > 0) {
+      qb.andWhere('p.age <= :prefAgeMax', { prefAgeMax: max });
+      applied = true;
+    }
+
+    const religions = list(prefs.religions);
+    if (religions.length) {
+      qb.andWhere(`${this.sqlNorm('p.religion')} IN (:...prefReligions)`, { prefReligions: religions });
+      applied = true;
+    }
+    const castes = list(prefs.castes);
+    if (castes.length) {
+      qb.andWhere(`${this.sqlNorm('p.caste')} IN (:...prefCastes)`, { prefCastes: castes });
+      applied = true;
+    }
+    // Preference values may be a level ("Master's") or a field ("Architecture").
+    const education = list(prefs.education);
+    if (education.length) {
+      qb.andWhere(
+        `(${this.sqlNorm('p.educationLevel')} IN (:...prefEducation) OR ${this.sqlNorm('p.educationField')} IN (:...prefEducation))`,
+        { prefEducation: education },
+      );
+      applied = true;
+    }
+    const occupations = list(prefs.occupations);
+    if (occupations.length) {
+      qb.andWhere(`${this.sqlNorm('p.occupationTitle')} IN (:...prefOccupations)`, { prefOccupations: occupations });
+      applied = true;
+    }
+    const locations = list(prefs.locations);
+    if (locations.length) {
+      qb.andWhere(
+        `(${this.sqlNorm('p.city')} IN (:...prefLocations) OR ${this.sqlNorm('p.state')} IN (:...prefLocations) OR ${this.sqlNorm('p.country')} IN (:...prefLocations))`,
+        { prefLocations: locations },
+      );
+      applied = true;
+    }
+    const familyType = (prefs.familyType ?? '').trim().toLowerCase();
+    if (familyType === 'joint' || familyType === 'nuclear') {
+      qb.andWhere('p.familyType = :prefFamilyType', { prefFamilyType: familyType });
+      applied = true;
+    }
+    // foodPreference is intentionally not applied: profiles have no dedicated food column to compare against.
+    return applied;
+  }
+
+  /** lower-case, trimmed, and cut at the first apostrophe: "Master's" -> "master". */
+  private normalizePrefText(value: unknown): string {
+    return String(value ?? '')
+      .toLowerCase()
+      .split(/['\u2018\u2019\u02bc`]/)[0]
+      .trim();
+  }
+
+  /** SQL twin of normalizePrefText for a column. */
+  private sqlNorm(column: string): string {
+    return `LOWER(TRIM(SUBSTRING_INDEX(REPLACE(REPLACE(${column}, '\u2019', ''''), '\u2018', ''''), '''', 1)))`;
+  }
+
+  /** Height text -> centimetres. Understands 5'7", 5'7, 170 cm and bare numbers (>100 = cm, else feet). */
+  private heightToCm(raw?: string | null): number | null {
+    if (!raw) return null;
+    const text = String(raw).trim().toLowerCase();
+    const ft = text.match(/^(\d)\s*(?:'|ft|feet|\.)\s*(\d{1,2})?/);
+    if (ft) return Math.round((Number(ft[1]) * 12 + Number(ft[2] ?? 0)) * 2.54);
+    const num = text.match(/^(\d+(?:\.\d+)?)/);
+    if (!num) return null;
+    const n = Number(num[1]);
+    return n > 100 ? n : null;
+  }
+
+  private parseHeightRange(
+    prefs: Profile['preferences'] | null | undefined,
+  ): { min: number | null; max: number | null } | null {
+    const min = this.heightToCm(prefs?.heightRange?.min);
+    const max = this.heightToCm(prefs?.heightRange?.max);
+    return min === null && max === null ? null : { min, max };
+  }
+
+  /** Unknown/unparseable candidate heights are kept — absence of data is not a mismatch. */
+  private heightWithin(
+    raw: string | null | undefined,
+    range: { min: number | null; max: number | null },
+  ): boolean {
+    const cm = this.heightToCm(raw);
+    if (cm === null) return true;
+    return (range.min === null || cm >= range.min) && (range.max === null || cm <= range.max);
+  }
+
   /**
    * Build a map of `otherUserId -> interest status` for the given user against a set
    * of other users. An interest between the pair is matched in EITHER direction
@@ -178,18 +345,14 @@ export class MatchesService {
 
     const oppositeGender = user.gender === 'bride' ? 'groom' : 'bride';
 
-    // Find candidate profiles — leftJoinAndSelect 'p.user' so candidate.user.id is available
-    const candidates = await this.profileRepo
-      .createQueryBuilder('p')
-      .leftJoinAndSelect('p.photos', 'photos')
-      .leftJoinAndSelect('p.user', 'u')
-      .where('p.gender = :gender', { gender: oppositeGender })
-      .andWhere('p.status = :status', { status: 'active' })
-      .andWhere('p.is_searchable = :isSearchable', { isSearchable: 1 })
-      .andWhere('u.id != :userId', { userId })
-      .orderBy('RAND()')
-      .take(count)
-      .getMany();
+    // Same selection as generateMatches: preference-matched profiles first, random fill after.
+    // (candidate.user.id is available because the shared query joins 'p.user'.)
+    const candidates = await this.pickCandidates(
+      userId,
+      oppositeGender,
+      user.profile.preferences,
+      count,
+    );
 
     const matchIds: string[] = [];
     for (const candidate of candidates) {
