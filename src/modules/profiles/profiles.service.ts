@@ -19,6 +19,7 @@ import { VoiceUploadService } from '../media/voice-upload.service';
 import { DateService } from 'src/shared/services/date.service';
 import { shareProfileEmailTemplate, ShareProfileParams } from 'src/shared/email/templates/share-profile.email.template';
 import { PersonalityService } from '../personality/personality.service';
+import { shareProfileEmailTemplateV2, ShareProfileV2Params } from 'src/shared/email/templates/share-profilev2.email.template';
 
 
 @Injectable()
@@ -509,17 +510,18 @@ export class ProfilesService {
     if (!profile) throw new NotFoundException('Profile not found');
 
     const profileInfo = this.buildSharedProfileInfo(profile);
+    const profileInfoV2 = this.buildSharedProfileV2Info(profile);
 
     const senderName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'A Aurora member';
     const subject = dto.subject ?? `${senderName} wants to share a profile with you on Aurora Matrimony`;
-    const html = shareProfileEmailTemplate({
+    const html = shareProfileEmailTemplateV2({
       senderName,
       receiverName: dto.receiverName,
       profileUrl: dto.shareUrl,
       subject: dto.subject,
       body: dto.body,
       domain,
-      profile: profileInfo,
+      profile: profileInfoV2,
     });
 
     if (dto.preview) {
@@ -559,6 +561,8 @@ export class ProfilesService {
       photoUrl: primaryPhoto?.variants?.displayUrl ?? primaryPhoto?.url ?? undefined,
       name: fullName,
       dateOfBirth: this.formatShareDate(profile.dateOfBirth),
+      profileId: profile.profileCode ?? undefined,
+      gender: profile.gender ?? undefined,      
       age: profile.age ?? undefined,
       height: profile.height ?? undefined,
       religion: profile.religion ?? undefined,
@@ -570,17 +574,96 @@ export class ProfilesService {
       city: location || undefined,
       country: profile.country ?? undefined,
       willingToRelocate: profile.willingToRelocate ? 'Yes' : 'No',
+      about: profile.aboutMe ?? undefined,
 
       // Horoscope — section auto-hides if all three are undefined.
       rasi: horoscope.rashi ?? undefined,
       nakshatra: horoscope.nakshatra ?? undefined,
+      lagna: horoscope.lagna ?? undefined,
+      tossing: horoscope.tossing ?? undefined,
       manglik: horoscope.manglikStatus ?? undefined,
 
       // Family — section auto-hides if all four are undefined.
       fatherOccupation: profile.fatherOccupation ?? undefined,
       motherOccupation: profile.motherOccupation ?? undefined,
       siblings,
+      familyType: profile.familyType ?? undefined,
       familyNote: profile.familyPreferenceNote ?? undefined,
+      
+      // ── Partner preferences
+      preferenceAge: profile.preferences?.ageRange.min.toString() ?? "",
+      preferenceReligion: profile.preferences?.religions.join(', ') ?? "",
+      preferenceEducation: profile.preferences?.education.join(', ') ?? "",
+      preferenceNote: profile.familyPreferenceNote ?? undefined,
+      preferenceFamilyType: profile.preferences?.familyType ?? undefined,      
+    };
+  }
+
+  /**
+   * Maps a stored Profile onto the shape shareProfileEmailTemplate expects.
+   * Every field but `name` is optional — the template hides empty rows and drops
+   * whole sections (Horoscope, Family) when they have nothing to show, so
+   * `undefined` is the right value for anything the member hasn't filled in.
+   */
+  private buildSharedProfileV2Info(profile: Profile): ShareProfileV2Params['profile'] {
+    const fullName =
+      [profile.firstName, profile.lastName].filter(Boolean).join(' ') || 'A Suhana member';
+
+    // Primary active photo, falling back to the first active one.
+    const activePhotos = (profile.photos ?? []).filter((ph) => Number(ph.isActive) === 1);
+    const primaryPhoto = activePhotos.find((ph) => ph.isPrimary) ?? activePhotos[0];
+
+    const location = [profile.city, profile.state].filter(Boolean).join(', ');
+    const education = [profile.educationLevel, profile.educationField].filter(Boolean).join(', ');
+
+    const siblingCount = profile.siblings;
+    const siblings =
+      siblingCount === null || siblingCount === undefined
+        ? undefined
+        : `${siblingCount} sibling${Number(siblingCount) === 1 ? '' : 's'}`;
+
+    const horoscope = profile.horoscope ?? {};
+
+    return {
+      photoUrl: primaryPhoto?.variants?.displayUrl ?? primaryPhoto?.url ?? undefined,
+      name: fullName,
+      dateOfBirth: this.formatShareDate(profile.dateOfBirth),
+      profileId: profile.profileCode ?? undefined,
+      gender: profile.gender ?? undefined,
+      age: profile.age ?? undefined,
+      height: profile.height ?? undefined,
+      religion: profile.religion ?? undefined,
+      caste: profile.caste ?? undefined,
+      occupation: profile.occupationTitle ?? undefined,
+      annualIncome: profile.annualIncome ?? undefined,
+      education: education || undefined,
+      motherTongue: profile.motherTongue ?? undefined,
+      city: location || undefined,
+      country: profile.country ?? undefined,
+      willingToRelocate: profile.willingToRelocate ? 'Yes' : 'No',
+      about: profile.aboutMe ?? undefined,
+
+ 
+      // Horoscope — section auto-hides if all three are undefined.
+      rasi: horoscope.rashi ?? undefined,
+      nakshatra: horoscope.nakshatra ?? undefined,
+      lagna: horoscope.lagna ?? undefined,
+      tossing: horoscope.tossing ?? undefined,
+      manglik: horoscope.manglikStatus ?? undefined,
+
+      // Family — section auto-hides if all four are undefined.
+      fatherOccupation: profile.fatherOccupation ?? undefined,
+      motherOccupation: profile.motherOccupation ?? undefined,
+      siblings,
+      familyType: profile.familyType ?? undefined,
+      familyNote: profile.familyPreferenceNote ?? undefined,
+      
+      // ── Partner preferences
+      preferenceAge: profile.preferences?.ageRange.min.toString() ?? "",
+      preferenceReligion: profile.preferences?.religions.join(', ') ?? "",
+      preferenceEducation: profile.preferences?.education.join(', ') ?? "",
+      preferenceNote: profile.familyPreferenceNote ?? undefined,
+      preferenceFamilyType: profile.preferences?.familyType ?? undefined,
     };
   }
 
@@ -602,17 +685,18 @@ async shareProfileByGuest(userId: string, dto: ShareProfileDto, domain: string):
     if (!profile) throw new NotFoundException('Profile not found');
 
     const profileInfo = this.buildSharedProfileInfo(profile);
+    const profileInfoV2 = this.buildSharedProfileV2Info(profile);
 
     const senderName = userId;
     const subject = dto.subject ?? `${senderName} wants to share a profile with you on Aurora Matrimony`;
-    const html = shareProfileEmailTemplate({
+    const html = shareProfileEmailTemplateV2({
       senderName,
       receiverName: dto.receiverName,
       profileUrl: dto.shareUrl,
       subject: dto.subject,
       body: dto.body,
       domain,
-      profile: profileInfo
+      profile: profileInfoV2
     });
 
     if (dto.preview) {
