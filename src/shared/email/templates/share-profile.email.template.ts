@@ -175,29 +175,45 @@ export interface ShareProfileParams {
   profile: {
     photoUrl?:            string;
     name:                 string;
-    dateOfBirth?:         string;   // e.g. "21 Sep 1993"
-    age?:                 number;   // e.g. 32
-    height?:              string;   // e.g. "5'9\""
+    profileId?:           string;   // e.g. "SUH10234"
+    gender?:              'Bride' | 'Groom' | string;
+    dateOfBirth?:         string;
+    age?:                 number;
+    height?:              string;
     religion?:            string;
     caste?:               string;
-    occupation?:          string;
-    annualIncome?:        string;   // e.g. "$140,000"
-    education?:           string;
     motherTongue?:        string;
     city?:                string;
     country?:             string;
     willingToRelocate?:   'Yes' | 'No' | string;
+    about?:               string;   // italic quote under name
 
-    // ── Horoscope (hidden if all null) ────────────────────────────────────
+    // ── Career & Education ───────────────────────────────────────────────
+    education?:           string;
+    occupation?:          string;
+    employer?:            string;
+    annualIncome?:        string;
+
+    // ── Horoscope ────────────────────────────────────────────────────────
     rasi?:                string;
     nakshatra?:           string;
-    manglik?:             string;   // "Yes" | "No"
+    lagna?:               string;
+    manglik?:             string;
+    tossing?:             string;
 
-    // ── Family (hidden if all null) ───────────────────────────────────────
+    // ── Family ───────────────────────────────────────────────────────────
     fatherOccupation?:    string;
     motherOccupation?:    string;
-    siblings?:            string;   // e.g. "1 brother, 1 sister"
-    familyNote?:          string;   // free-text family preference note
+    siblings?:            string;
+    familyType?:          string;
+    familyNote?:          string;
+
+    // ── Partner preferences ───────────────────────────────────────────────
+    preferenceAge?:       string;   // e.g. "25 – 35 years"
+    preferenceReligion?:  string;
+    preferenceEducation?: string;
+    preferenceNote?:      string;
+    preferenceFamilyType?: string;
   };
 }
 
@@ -272,6 +288,7 @@ export const shareProfileEmailTemplate = (params: ShareProfileParams): string =>
   const horoscopeSection = profileSection('Horoscope Details', [
     ['Rasi',      p.rasi],
     ['Nakshatra', p.nakshatra],
+    ['Lagna',      p.lagna],
     ['Manglik',   p.manglik],
   ]);
 
@@ -280,6 +297,14 @@ export const shareProfileEmailTemplate = (params: ShareProfileParams): string =>
     ['Mother\'s Occupation', p.motherOccupation],
     ['Siblings',             p.siblings],
     ['Family Note',          p.familyNote],
+  ]);
+
+  const partnerPreferencesSection = profileSection('Partner Preferences', [
+    ['Age range',  p.preferenceAge],
+    ['Religion',   p.preferenceReligion],
+    ['Education',  p.preferenceEducation],
+    ['Preference Note', p.preferenceNote],
+    ['Family Type', p.preferenceFamilyType],
   ]);
 
   return `
@@ -463,6 +488,7 @@ export const shareProfileEmailTemplate = (params: ShareProfileParams): string =>
                 ${careerSection}
                 ${horoscopeSection}
                 ${familySection}
+                ${partnerPreferencesSection}
 
               </div>
               <!-- /profile card -->
