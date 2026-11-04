@@ -182,6 +182,58 @@ export class ImageService {
   }
 
   /**
+   * Fetches one of our own stored images server-side so the browser can draw it onto a canvas
+   * (the bucket sends no CORS headers). Restricted to this bucket's matrimony/ folder so it
+   * cannot be used as an open proxy.
+   */
+  async fetchStoredImage(url: string): Promise<{ buffer: Buffer; contentType: string }> {
+    if (!this.cloudStorageService.isOwnUrlUnder(url, 'matrimony')) {
+      throw new BadRequestException('Only images stored by Aurora can be fetched');
+    }
+    let res: Response;
+    try {
+      res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+    } catch {
+      throw new NotFoundException('Image could not be retrieved');
+    }
+    const contentType = res.headers.get('content-type') ?? '';
+    if (!res.ok || !/^image\/(jpeg|jpg|png|webp)/.test(contentType)) {
+      throw new NotFoundException('Image could not be retrieved');
+    }
+    const buffer = Buffer.from(await res.arrayBuffer());
+    if (buffer.length > 10 * 1024 * 1024) throw new BadRequestException('Image is too large');
+    return { buffer, contentType };
+  }
+
+  /**
+   * Stores a rendered profile poster for sharing on social media / email.
+   * Object path: social-media/{profileId}-{yyyyMMddHHmmssSSS}.jpg (UTC).
+   * Not recorded in uploaded_images (its context column is an enum we don't extend here).
+   */
+  async uploadSocialMediaImage(
+    file: Express.Multer.File,
+    profileId: string,
+  ): Promise<{ success: boolean; message: string; data: { imageUrl: string; fileName: string } }> {
+    if (!file) throw new BadRequestException('No file provided');
+    if (!/^[A-Za-z0-9-]{1,64}$/.test(profileId ?? '')) {
+      throw new BadRequestException('profileId is required and may only contain letters, digits and hyphens');
+    }
+    await this.cloudStorageService.isFileValid(file);
+
+    const stamp = new Date().toISOString().replace(/[-:T.Z]/g, ''); // yyyyMMddHHmmssSSS
+    const fileName = `${profileId}-${stamp}.jpg`;
+    try {
+      const imageUrl = await this.cloudStorageService.uploadToPath(file, `social-media/${fileName}`);
+      return { success: true, message: 'Image uploaded successfully', data: { imageUrl, fileName } };
+    } catch (err) {
+      if (err instanceof BadRequestException) throw err;
+      throw new InternalServerErrorException(
+        `Upload failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
    * List all images uploaded by the authenticated user.
    * Optionally filtered by context.
    */

@@ -43,6 +43,12 @@ export class ShareProfileDto {
   @MaxLength(1000)
   body?: string;
 
+  @ApiPropertyOptional({ description: 'URL of a rendered profile poster (from POST /images/social-media) to embed in the email' })
+  @IsOptional()
+  @IsUrl()
+  @MaxLength(500)
+  posterImageUrl?: string;
+
   @ApiProperty({ description: 'Flag to indicate if the email should be sent as a preview', example: false, default: false })
   @IsOptional()
   @IsBoolean()

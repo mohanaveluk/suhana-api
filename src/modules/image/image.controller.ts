@@ -2,7 +2,7 @@ import {
   Controller, Post, Get, Delete, Param, Body, Query,
   Request, UseGuards, UseInterceptors, UploadedFile,
   ParseFilePipe, MaxFileSizeValidator, FileTypeValidator,
-  BadRequestException,
+  BadRequestException, StreamableFile,
 } from '@nestjs/common';
 import {
   ApiTags, ApiOperation, ApiResponse, ApiBearerAuth,
@@ -98,6 +98,50 @@ export class ImageController {
     return this.imageService.uploadImageWithVariants(req.user.id, file, context);
   }
 
+
+  // POST /images/social-media
+  @Post('social-media')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary: 'Upload a rendered profile poster for social-media / email sharing',
+    description:
+      'Stores the JPEG at social-media/{profileId}-{datetime}.jpg in the bucket and returns its public URL. ' +
+      'Accepted formats: jpg, jpeg, png, webp. Max size: 5 MB.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 201, description: 'Image uploaded' })
+  @ApiResponse({ status: 400, description: 'Invalid file type, size or profileId' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async uploadSocialMediaImage(
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: maxFileSize }),
+          new FileTypeValidator({ fileType: /^image\/(jpeg|jpg|png|webp)$/ }),
+        ],
+        errorHttpStatusCode: 400,
+      }),
+    )
+    file: Express.Multer.File,
+    @Body('profileId') profileId: string,
+  ) {
+    return this.imageService.uploadSocialMediaImage(file, profileId);
+  }
+
+  // GET /images/proxy?url=...
+  @Get('proxy')
+  @ApiOperation({
+    summary: 'Fetch a stored Aurora image through the API',
+    description: 'Returns the bytes of an image in our own bucket (matrimony/ folder) so the web app can render it onto a canvas.',
+  })
+  @ApiQuery({ name: 'url', required: true })
+  @ApiResponse({ status: 200, description: 'Image bytes' })
+  @ApiResponse({ status: 400, description: 'URL is not one of our stored images' })
+  @ApiResponse({ status: 404, description: 'Image could not be retrieved' })
+  async proxyImage(@Query('url') url: string): Promise<StreamableFile> {
+    const { buffer, contentType } = await this.imageService.fetchStoredImage(url);
+    return new StreamableFile(buffer, { type: contentType });
+  }
 
   // GET /images/my
   @Get('my')

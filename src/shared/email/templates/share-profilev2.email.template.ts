@@ -230,6 +230,7 @@ export interface ShareProfileV2Params {
 
   // ── Logo ─────────────────────────────────────────────────────────────────
   logoUrl?:      string;   // Aurora logo image URL (optional; text fallback used)
+  posterImageUrl?: string; // rendered profile poster, embedded under the sender's note
 
   // ── Profile ───────────────────────────────────────────────────────────────
   profile: {
@@ -311,6 +312,19 @@ export const shareProfileEmailTemplateV2 = (params: ShareProfileV2Params): strin
                   font-size:28px;font-weight:700;
                   color:${C.goldBright};letter-spacing:0.5px;
                   line-height:1;">Aurora Matrimony</span>`;
+
+  // ── Rendered profile poster (optional) ────────────────────────────────────
+  const posterBlock = params.posterImageUrl
+    ? `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+         <tr><td align="center">
+           <a href="${safeUrl}" target="_blank" style="text-decoration:none;">
+             <img src="${encodeImgUrl(params.posterImageUrl)}" alt="${esc(p.name)} — Aurora Matrimony profile"
+                  width="420" style="display:block;width:100%;max-width:420px;height:auto;
+                                     border:1px solid ${C.roseGoldLighter};border-radius:12px;" />
+           </a>
+         </td></tr>
+       </table>`
+    : '';
 
   // ── Photo or initials portrait ────────────────────────────────────────────
   const photoBlock = safePhoto
@@ -556,6 +570,7 @@ export const shareProfileEmailTemplateV2 = (params: ShareProfileV2Params): strin
                   </td>
                 </tr>
               </table>
+              ${posterBlock}
             </td>
           </tr>
 
@@ -872,6 +887,302 @@ export const shareProfileEmailTemplateV2 = (params: ShareProfileV2Params): strin
 </html>`.trim();
 };
 
+export const shareMediaProfileEmailTemplateV2 = (params: ShareProfileV2Params): string => {
+
+  const { senderName, receiverName, profileUrl, domain } = params;
+  const p          = params.profile;
+  const year       = new Date().getFullYear();
+  const shareIcon  = getShareIconBase64();
+  const safeUrl    = encodeImgUrl(profileUrl);
+  const safePhoto  = p.photoUrl ? encodeImgUrl(p.photoUrl) : null;
+  const initial    = p.name.trim().charAt(0).toUpperCase() || '?';
+  const sInitial   = senderName.trim().charAt(0).toUpperCase() || 'S';
+  const genderBadge = p.gender ?? 'Profile';
+  const note = (params.body ?? '').trim() ||
+    `I came across this profile on Aurora Matrimony and felt it could be a wonderful match. Please take a look!`;
+  //const logoUrl = params.logoUrl || 'https://storage.googleapis.com/inv-images/matrimony/home/circle-crop-trns.png';
+  const logoUrl = params.logoUrl || 'https://storage.googleapis.com/inv-images/matrimony/home/firefly.png';
+  
+  // ── Logo block ────────────────────────────────────────────────────────────
+  // If a logoUrl is provided, show it as an image; otherwise pure text brand name.
+  // Logo container is 180×72 so the image always fits without overflow.
+  const logoBlock = logoUrl
+    ? `<img src="${encodeImgUrl(logoUrl)}" alt="Aurora Matrimony"
+            height="48" style="display:block;height:48px;max-width:180px;
+                               object-fit:contain;border:0;" />`
+    : `<span style="font-family:${C.fontname};
+                    font-size:26px;font-weight:700;
+                    color:${C.goldBright};letter-spacing:0.5px;
+                    line-height:1;">Aurora Matrimony</span>`;
+  const headerBlock = `<span style="font-family:${C.fontname};
+                  font-size:28px;font-weight:700;
+                  color:${C.goldBright};letter-spacing:0.5px;
+                  line-height:1;">Aurora Matrimony</span>`;
+
+  // ── Rendered profile poster (optional) ────────────────────────────────────
+  const posterBlock = params.posterImageUrl
+    ? `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+         <tr><td align="center">
+           <a href="${safeUrl}" target="_blank" style="text-decoration:none;">
+             <img src="${encodeImgUrl(params.posterImageUrl)}" alt="${esc(p.name)} — Aurora Matrimony profile"
+                  width="500" style="display:block;width:100%;max-width:500px;height:auto;
+                                     border:1px solid ${C.roseGoldLighter};border-radius:12px;" />
+           </a>
+         </td></tr>
+       </table>`
+    : '';
+
+  // ── Photo or initials portrait ────────────────────────────────────────────
+  const photoBlock = safePhoto
+    ? `<img src="${safePhoto}" alt="${esc(p.name)}"
+            width="160" height="200"
+            style="display:block;width:160px;height:200px;
+                   border-radius:80px 80px 12px 12px;
+                   object-fit:cover;border:0;" />`
+    : `<table cellpadding="0" cellspacing="0" border="0" width="160" height="200">
+         <tr>
+           <td align="center" valign="middle"
+               style="width:160px;height:200px;
+                      border-radius:80px 80px 12px 12px;
+                      background:${C.roseGoldLighter};
+                      font-family:${C.fontname};
+                      font-size:56px;font-weight:700;color:${C.maroon};">
+             ${initial}
+           </td>
+         </tr>
+       </table>`;
+
+  // ── Feature icon data URIs ────────────────────────────────────────────────
+  const iconCommunity1 = svgDataUri(`<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.2c2.8.3 5 2.7 5 5.8"/>`);
+  const iconHoroscope1 = svgDataUri(`<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3z"/>`);
+  const iconPrivacy1   = svgDataUri(`<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>`);
+  const iconHeart1     = svgDataUri(`<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>`);
+
+  const iconCommunity = 'https://storage.googleapis.com/inv-images/matrimony/icon/tsgroup.png';
+  const iconHoroscope = 'https://storage.googleapis.com/inv-images/matrimony/icon/tsstar.png';
+  const iconPrivacy   = 'https://storage.googleapis.com/inv-images/matrimony/icon/tsprivacy.png';
+  const iconHeart     = 'https://storage.googleapis.com/inv-images/matrimony/icon/tshearty.png';
+
+  // ── Section: horoscope (shown only if at least one field has a value) ─────
+  const hasHoroscope = [p.rasi, p.nakshatra, p.lagna, p.manglik].some(v => v);
+  const horoscopeSection = hasHoroscope
+    ? card(`
+        ${sectionHeading('Horoscope')}
+        ${detailGrid([
+          ['Rasi (Moon sign)', p.rasi],
+          ['Nakshatra',        p.nakshatra],
+          ['Lagna',            p.lagna],
+          ['Manglik',          p.manglik],
+        ])}`)
+    : '';
+
+  // ── Section: family ───────────────────────────────────────────────────────
+  const hasFamily = [p.fatherOccupation, p.motherOccupation, p.siblings, p.familyType, p.familyNote].some(v => v);
+  const familySection = hasFamily
+    ? card(`
+        ${sectionHeading('Family Background')}
+        ${detailGrid([
+          ["Father's Occupation", p.fatherOccupation],
+          ["Mother's Occupation", p.motherOccupation],
+          ['Siblings',            p.siblings],
+          ['Family Type',         p.familyType],
+        ])}
+        ${p.familyNote ? `
+        <p style="margin:8px 0 0;font-family:${C.fontname};
+                  font-size:13px;color:${C.textMuted};
+                  font-style:italic;line-height:1.6;">
+          &ldquo;${esc(p.familyNote)}&rdquo;
+        </p>` : ''}`)
+    : '';
+
+  // ── Section: partner preferences ─────────────────────────────────────────
+  const hasPrefs = [p.preferenceAge, p.preferenceReligion, p.preferenceEducation, p.preferenceNote].some(v => v);
+  const prefsSection = hasPrefs
+    ? card(`
+        ${sectionHeading('Partner Preferences')}
+        ${detailGrid([
+          ['Age range',  p.preferenceAge],
+          ['Religion',   p.preferenceReligion],
+          ['Education',  p.preferenceEducation],
+        ], 3)}
+        ${p.preferenceNote ? `
+        <p style="margin:10px 0 0;font-family:${C.fontname};
+                  font-size:13px;color:${C.textMuted};line-height:1.6;">
+          ${esc(p.preferenceNote)}
+        </p>` : ''}`)
+    : '';
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>${esc(senderName)} shared a profile with you – Aurora Matrimony</title>
+</head>
+<body style="margin:0;padding:0;background-color:${C.blush};
+             font-family:Arial,Helvetica,sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background:${C.blush};padding:32px 16px;">
+    <tr>
+      <td align="center">
+
+        <table width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="max-width:620px;background:${C.ivoryBg};border-radius:20px;
+                      box-shadow:0 8px 32px ${C.shadow};overflow:hidden;">
+
+          <!-- ══════════════════════════════════════════════════
+               HEADER  — deep maroon + 4px gold bottom border
+               Left: logo + brand name + tagline
+               Right: gender badge + profile ID + domain
+               ══════════════════════════════════════════════════ -->
+          <!-- ══════════════════════════════════════════════════
+               GREETING + PERSONAL NOTE
+               ══════════════════════════════════════════════════ -->
+          <tr>
+            <td style="padding:28px 32px 0;">
+              <p style="margin:0 0 6px;font-size:15px;color:${C.textPrimary};line-height:1.7;">
+                Dear <strong>${esc(receiverName)}</strong>,
+              </p>
+              <!--<div style="width:36px;height:3px;background:${C.gradient};
+                          border-radius:2px;margin:0 0 14px;"></div>
+              <p style="margin:0 0 18px;font-size:14px;color:${C.textMuted};line-height:1.8;">
+                <strong style="color:${C.maroon};">${esc(senderName)}</strong>
+                came across a profile on <strong>Aurora Matrimony</strong> and
+                wanted to share it with you — they think it could be a wonderful match!
+              </p>-->
+
+              <!-- Sender note — left maroon bar quote -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="margin-bottom:24px;">
+                <tr>
+                  <td width="4"
+                      style="background:${C.maroon};border-radius:2px;"></td>
+                  <td style="padding:12px 16px;background:${C.ivoryWarm};
+                             border-radius:0 10px 10px 0;
+                             border:1px solid ${C.roseGoldLighter};border-left:none;">
+                    <p style="margin:0;font-family:${C.fontname};
+                              font-size:13px;color:${C.textPrimary};
+                              font-style:italic;line-height:1.75;">
+                      &ldquo;${esc(note)}&rdquo;
+                    </p>
+                    <p style="margin:6px 0 0;font-family:Arial,Helvetica,sans-serif;
+                              font-size:11px;color:${C.roseGold};">
+                      — ${esc(senderName)}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              ${posterBlock}
+            </td>
+          </tr>
+
+          <!-- ══════════════════════════════════════════════════
+               PROFILE HERO
+               Left: portrait photo (gold-bordered)
+               Right: name + meta + personal details grid
+               ══════════════════════════════════════════════════ -->
+          
+
+          <!-- ══════════════════════════════════════════════════
+               CAREER & EDUCATION  |  HOROSCOPE
+               Side-by-side (or full-width if no horoscope)
+               ══════════════════════════════════════════════════ -->
+          
+          <!-- ══════════════════════════════════════════════════
+               FOOTER  — deep maroon, aurora-style
+               Left: phone/CTA   Right: sender sign-off
+               ══════════════════════════════════════════════════ -->
+          <tr>
+            <td style="background:${C.maroonDeep};
+                       border-top:4px solid ${C.goldRule};
+                       padding:24px 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr valign="middle">
+
+                  <!-- Left: CTA text -->
+                  <td style="vertical-align:middle;">
+                    <p style="margin:0 0 4px;font-family:${C.fontname};
+                              font-size:16px;font-weight:700;color:#ffffff;line-height:1.2;">
+                      Register today &amp; meet your perfect match
+                    </p>
+                    <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
+                              font-size:12px;color:rgba(243,227,191,0.8);">
+                      Your forever begins here &middot; ${domain}
+                    </p>
+                  </td>
+
+                  <!-- Right: sender sign-off initial -->
+                  <td style="vertical-align:middle;text-align:right;
+                             padding-left:24px;white-space:nowrap;">
+                    <table cellpadding="0" cellspacing="0" border="0"
+                           style="margin-left:auto;">
+                      <tr>
+                        <td align="right" style="padding-bottom:6px;">
+                          <!-- Sender initial circle -->
+                          <table cellpadding="0" cellspacing="0" border="0"
+                                 style="display:inline-table;">
+                            <tr>
+                              <td align="center" valign="middle"
+                                  style="width:40px;height:40px;border-radius:50%;
+                                         background:${C.gradient};
+                                         border:2px solid ${C.goldBright};
+                                         font-family:${C.fontname};
+                                         font-size:18px;font-weight:700;
+                                         color:#ffffff;">
+                                ${sInitial}
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td align="right"
+                            style="font-family:${C.fontname};
+                                   font-size:13px;font-weight:700;
+                                   color:${C.goldBright};">
+                          ${esc(senderName)}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td align="right"
+                            style="font-family:Arial,Helvetica,sans-serif;
+                                   font-size:10px;
+                                   color:rgba(243,227,191,0.7);">
+                          via Aurora Matrimony
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Copyright strip -->
+                <tr>
+                  <td colspan="2"
+                      style="padding-top:16px;border-top:1px solid rgba(212,174,104,0.3);
+                             font-family:Arial,Helvetica,sans-serif;font-size:11px;
+                             color:rgba(243,227,191,0.5);text-align:center;">
+                    © ${year} Aurora Matrimony. All rights reserved.
+                    &nbsp;&middot;&nbsp;
+                    <a href="mailto:support@${domain}"
+                       style="color:${C.goldBright};text-decoration:none;">
+                      support@${domain}</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`.trim();
+};
 
 /* ─────────────────────────────────────────────────────────────────────────────
    USAGE EXAMPLE

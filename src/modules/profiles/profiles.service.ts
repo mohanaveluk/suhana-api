@@ -19,7 +19,7 @@ import { VoiceUploadService } from '../media/voice-upload.service';
 import { DateService } from 'src/shared/services/date.service';
 import { shareProfileEmailTemplate, ShareProfileParams } from 'src/shared/email/templates/share-profile.email.template';
 import { PersonalityService } from '../personality/personality.service';
-import { shareProfileEmailTemplateV2, ShareProfileV2Params } from 'src/shared/email/templates/share-profilev2.email.template';
+import { shareMediaProfileEmailTemplateV2, shareProfileEmailTemplateV2, ShareProfileV2Params } from 'src/shared/email/templates/share-profilev2.email.template';
 
 
 @Injectable()
@@ -521,6 +521,36 @@ export class ProfilesService {
       subject: dto.subject,
       body: dto.body,
       domain,
+      posterImageUrl: this.safePosterUrl(dto.posterImageUrl),
+      profile: profileInfoV2,
+    });
+
+    if (dto.preview) {
+      return { data: html, message: 'Profile preview generated successfully' };
+    }
+
+    await this.emailService.sendEmail({ to: dto.toEmail, subject, html });
+    return { message: 'Profile shared successfully' };
+  }
+
+  async shareMediaProfile(userId: string, dto: ShareProfileDto, domain: string): Promise<{ message: string; data?: string }> {
+    const user = await this.userRepo.findOne({ where: { id: userId }});
+    if (!user) throw new NotFoundException('User not found');
+    const profile = await this.profileRepo.findOne({ where: [{ id: dto.profileId  }, {profileCode: dto.profileCode}]  });
+    if (!profile) throw new NotFoundException('Profile not found');
+
+    const profileInfoV2 = this.buildSharedProfileV2Info(profile);
+
+    const senderName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'A Aurora member';
+    const subject = dto.subject ?? `${senderName} wants to share a profile with you on Aurora Matrimony`;
+    const html = shareMediaProfileEmailTemplateV2({
+      senderName,
+      receiverName: dto.receiverName,
+      profileUrl: dto.shareUrl,
+      subject: dto.subject,
+      body: dto.body,
+      domain,
+      posterImageUrl: this.safePosterUrl(dto.posterImageUrl),
       profile: profileInfoV2,
     });
 
@@ -696,6 +726,7 @@ async shareProfileByGuest(userId: string, dto: ShareProfileDto, domain: string):
       subject: dto.subject,
       body: dto.body,
       domain,
+      posterImageUrl: this.safePosterUrl(dto.posterImageUrl),
       profile: profileInfoV2
     });
 
@@ -705,6 +736,11 @@ async shareProfileByGuest(userId: string, dto: ShareProfileDto, domain: string):
     
     await this.emailService.sendEmail({ to: dto.toEmail, subject, html });
     return { message: 'Profile shared successfully' };
+  }
+
+  /** Only accept poster images we stored ourselves under social-media/ — never an arbitrary caller-supplied URL. */
+  private safePosterUrl(url?: string): string | undefined {
+    return this.cloudStorageService.isOwnUrlUnder(url, 'social-media') ? url : undefined;
   }
 
   async deletePhoto(userId: string, photoId: string) {
