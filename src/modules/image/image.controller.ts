@@ -128,6 +128,35 @@ export class ImageController {
     return this.imageService.uploadSocialMediaImage(file, profileId);
   }
 
+  // POST /images/profile-media
+  @Post('profile-media')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary: 'Upload a rendered "share profile" card (WhatsApp / email app)',
+    description:
+      'Stores the JPEG at profile-media/{profileId}-{datetime}.jpg in the bucket and returns its public URL. ' +
+      'Accepted formats: jpg, jpeg, png, webp. Max size: 8 MB.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 201, description: 'Image uploaded' })
+  @ApiResponse({ status: 400, description: 'Invalid file type, size or profileId' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async uploadProfileMediaImage(
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: maxFileSize }),
+          new FileTypeValidator({ fileType: /^image\/(jpeg|jpg|png|webp)$/ }),
+        ],
+        errorHttpStatusCode: 400,
+      }),
+    )
+    file: Express.Multer.File,
+    @Body('profileId') profileId: string,
+  ) {
+    return this.imageService.uploadProfileMediaImage(file, profileId);
+  }
+
   // GET /images/proxy?url=...
   @Get('proxy')
   @ApiOperation({
