@@ -184,6 +184,18 @@ export class ProfilesController {
     return this.profilesService.shareProfile(req.user.id, dto, domain);
   }
 
+  @Post('share-media')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Share a profile link with media via email' })
+  @ApiResponse({ status: 201, description: 'Profile shared successfully', schema: { example: { message: 'Profile shared successfully' } } })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Logged-in user not found' })
+  shareMediaProfile(@Request() req: any, @Body() dto: ShareProfileDto) {
+    const domain = req.get('origin') ?? req.get('host') ?? '';
+    return this.profilesService.shareMediaProfile(req.user.id, dto, domain);
+  }
+
   @Post('gshare')
   @ApiOperation({ summary: 'Share a profile link via email by a guest user' })
   @ApiResponse({ status: 201, description: 'Profile shared successfully', schema: { example: { message: 'Profile shared successfully' } } })

@@ -133,6 +133,42 @@ export class CloudStorageService {
     }
   }
 
+  /**
+   * Uploads a file to an exact object path (no uuid prefix) and returns its public URL.
+   * Never overwrites: the write fails if the object already exists.
+   */
+  async uploadToPath(file: Express.Multer.File, objectPath: string): Promise<string> {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('No file provided');
+    }
+    try {
+      const target = this.storage.bucket(this.bucketName).file(objectPath);
+      await new Promise<void>((resolve, reject) => {
+        const stream = target.createWriteStream({
+          metadata: { contentType: file.mimetype },
+          validation: 'md5',
+          preconditionOpts: { ifGenerationMatch: 0 },
+        });
+        stream.on('error', (error) =>
+          reject(new BadRequestException(`Upload failed: ${error.message}`)),
+        );
+        stream.on('finish', () => resolve());
+        stream.end(file.buffer);
+      });
+      return `https://storage.googleapis.com/${this.bucketName}/${objectPath}`;
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      throw new BadRequestException(`Upload service error: ${error.message}`);
+    }
+  }
+
+  /** True only for URLs of images this service stored under the given folder of our bucket. */
+  isOwnUrlUnder(url: string | undefined | null, folder: string): boolean {
+    if (!url) return false;
+    return url.startsWith(`https://storage.googleapis.com/${this.bucketName}/${folder}/`)
+      && !url.includes('..');
+  }
+
   async deleteFile(fileUrl: string): Promise<void> {
     try {
       // Extract filename from Google Cloud Storage URL
