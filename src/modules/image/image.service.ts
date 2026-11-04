@@ -210,9 +210,19 @@ export class ImageService {
    * Object path: social-media/{profileId}-{yyyyMMddHHmmssSSS}.jpg (UTC).
    * Not recorded in uploaded_images (its context column is an enum we don't extend here).
    */
-  async uploadSocialMediaImage(
+  uploadSocialMediaImage(file: Express.Multer.File, profileId: string) {
+    return this.uploadRenderedImage(file, profileId, 'social-media');
+  }
+
+  /** Stores the rendered "share profile" card at profile-media/{profileId}-{datetime}.jpg. */
+  uploadProfileMediaImage(file: Express.Multer.File, profileId: string) {
+    return this.uploadRenderedImage(file, profileId, 'profile-media');
+  }
+
+  private async uploadRenderedImage(
     file: Express.Multer.File,
     profileId: string,
+    folder: 'social-media' | 'profile-media',
   ): Promise<{ success: boolean; message: string; data: { imageUrl: string; fileName: string } }> {
     if (!file) throw new BadRequestException('No file provided');
     if (!/^[A-Za-z0-9-]{1,64}$/.test(profileId ?? '')) {
@@ -223,7 +233,7 @@ export class ImageService {
     const stamp = new Date().toISOString().replace(/[-:T.Z]/g, ''); // yyyyMMddHHmmssSSS
     const fileName = `${profileId}-${stamp}.jpg`;
     try {
-      const imageUrl = await this.cloudStorageService.uploadToPath(file, `social-media/${fileName}`);
+      const imageUrl = await this.cloudStorageService.uploadToPath(file, `${folder}/${fileName}`);
       return { success: true, message: 'Image uploaded successfully', data: { imageUrl, fileName } };
     } catch (err) {
       if (err instanceof BadRequestException) throw err;
