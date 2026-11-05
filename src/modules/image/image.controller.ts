@@ -2,7 +2,7 @@ import {
   Controller, Post, Get, Delete, Param, Body, Query,
   Request, UseGuards, UseInterceptors, UploadedFile,
   ParseFilePipe, MaxFileSizeValidator, FileTypeValidator,
-  BadRequestException, StreamableFile,
+  BadRequestException, StreamableFile, Header,
 } from '@nestjs/common';
 import {
   ApiTags, ApiOperation, ApiResponse, ApiBearerAuth,
@@ -163,6 +163,8 @@ export class ImageController {
     summary: 'Fetch a stored Aurora image through the API',
     description: 'Returns the bytes of an image in our own bucket (matrimony/ folder) so the web app can render it onto a canvas.',
   })
+  @Header('X-Content-Type-Options', 'nosniff')
+  @Header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox")
   @ApiQuery({ name: 'url', required: true })
   @ApiResponse({ status: 200, description: 'Image bytes' })
   @ApiResponse({ status: 400, description: 'URL is not one of our stored images' })

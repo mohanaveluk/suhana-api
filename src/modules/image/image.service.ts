@@ -197,7 +197,9 @@ export class ImageService {
       throw new NotFoundException('Image could not be retrieved');
     }
     const contentType = res.headers.get('content-type') ?? '';
-    if (!res.ok || !/^image\/(jpeg|jpg|png|webp)/.test(contentType)) {
+    // SVG is allowed for our own icons/avatars (e.g. matrimony/icon/avatar-default.svg); the controller
+    // serves it with a sandboxing CSP, and the web app only ever draws it through <img>/canvas.
+    if (!res.ok || !/^image\/(jpeg|jpg|png|webp|svg\+xml)/.test(contentType)) {
       throw new NotFoundException('Image could not be retrieved');
     }
     const buffer = Buffer.from(await res.arrayBuffer());
