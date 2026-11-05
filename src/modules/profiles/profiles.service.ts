@@ -622,8 +622,8 @@ export class ProfilesService {
       
       // ── Partner preferences
       preferenceAge: profile.preferences?.ageRange.min.toString() ?? "",
-      preferenceReligion: profile.preferences?.religions.join(', ') ?? "",
-      preferenceEducation: profile.preferences?.education.join(', ') ?? "",
+      preferenceReligion: profile.preferences?.religions?.join(', ') ?? "",
+      preferenceEducation: profile.preferences?.education?.join(', ') ?? "",
       preferenceNote: profile.familyPreferenceNote ?? undefined,
       preferenceFamilyType: profile.preferences?.familyType ?? undefined,      
     };
@@ -690,8 +690,8 @@ export class ProfilesService {
       
       // ── Partner preferences
       preferenceAge: profile.preferences?.ageRange.min.toString() ?? "",
-      preferenceReligion: profile.preferences?.religions.join(', ') ?? "",
-      preferenceEducation: profile.preferences?.education.join(', ') ?? "",
+      preferenceReligion: profile.preferences?.religions?.join(', ') ?? "",
+      preferenceEducation: profile.preferences?.education?.join(', ') ?? "",
       preferenceNote: profile.familyPreferenceNote ?? undefined,
       preferenceFamilyType: profile.preferences?.familyType ?? undefined,
     };
