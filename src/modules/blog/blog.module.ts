@@ -8,6 +8,8 @@ import { QAItem } from './entities/qa-item.entity';
 import { NewsletterSubscriber } from './entities/newsletter-subscriber.entity';
 import { BlogController } from './blog.controller';
 import { NestBlogService } from './blog.service';
+import { PublicBlogController } from './public-blog.controller';
+import { SeoModule } from '../seo/seo.module';
  
 @Module({
   imports: [
@@ -15,8 +17,9 @@ import { NestBlogService } from './blog.service';
       BlogPost, BlogComment, BlogLike,
       QAItem, UserQuestion, NewsletterSubscriber,
     ]),
+    SeoModule,
   ],
-  controllers: [BlogController],
+  controllers: [BlogController, PublicBlogController],
   providers:   [NestBlogService],
 })
 export class BlogModule {}
