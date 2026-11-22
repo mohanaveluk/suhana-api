@@ -12,6 +12,8 @@ import { AnswerQuestionDto } from './dto/answer-question.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { SubmitQuestionDto } from './dto/submit-question.dto';
 import { SubscribeDto } from './dto/subscribe.dto';
+import { IndexNowService } from '../seo/indexnow.service';
+import { blogPostPath } from '../seo/seo-url.util';
  
 @Injectable()
 export class NestBlogService {
@@ -22,6 +24,7 @@ export class NestBlogService {
     @InjectRepository(QAItem)               private qaRepo:         Repository<QAItem>,
     @InjectRepository(UserQuestion)         private questionRepo:   Repository<UserQuestion>,
     @InjectRepository(NewsletterSubscriber) private newsletterRepo: Repository<NewsletterSubscriber>,
+    private readonly indexNow: IndexNowService,
   ) {}
  
   // CREATE POST
@@ -51,19 +54,27 @@ export class NestBlogService {
       published:           true,
     });
     const saved = await this.postRepo.save(post);
+    if (saved.published) this.indexNow.notify([blogPostPath(saved.id, saved.title)]);
     return saved;
   }
   
   // UPDATE POST
   async updatePost(id: string, dto: UpdatePostDto): Promise<BlogPost> {
     const post = await this.postRepo.findOneOrFail({ where: { id } });
+    const before = { title: post.title, published: post.published };
     Object.assign(post, dto);
-    return this.postRepo.save(post);
+    const saved = await this.postRepo.save(post);
+    if (before.published || saved.published) {
+      this.indexNow.notify([blogPostPath(saved.id, before.title), blogPostPath(saved.id, saved.title)]);
+    }
+    return saved;
   }
  
   // DELETE POST
   async deletePost(id: string): Promise<void> {
+    const post = await this.postRepo.findOne({ where: { id }, select: ['id', 'title', 'published'] });
     await this.postRepo.delete(id);
+    if (post?.published) this.indexNow.notify([blogPostPath(post.id, post.title)]);
   }
  
   // GET USER QUESTIONS (admin)
@@ -257,7 +268,7 @@ export class NestBlogService {
     category: p.category, categoryLabel: p.category_label, tags: p.tags,
     author: { id: p.id, name: p.author_name, role: p.author_role,
               initials: p.author_initials, avatarColor: p.author_avatar_color },
-    publishedAt: p.published_at, readTime: p.read_time,
+    publishedAt: p.published_at, updatedAt: p.updated_at, readTime: p.read_time,
     likeCount: p.like_count, commentCount: p.comment_count, viewCount: p.view_count,
     liked: false, trending: p.trending, featured: p.featured,
   });
