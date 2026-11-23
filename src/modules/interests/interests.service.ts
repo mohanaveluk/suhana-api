@@ -1,15 +1,23 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Interest } from './entity/interest.entity';
-import { Match, User } from '../user/entity';
-import { match } from 'assert/strict';
+import { Interest, InterestSource } from './entity/interest.entity';
+import { Match, User, UserBlock } from '../user/entity';
 import { EmailService } from 'src/shared/email/email.service';
 import { CustomLoggerService } from '../logger/custom-logger.service';
 import { EmailType } from '../email-history/entity/email-history.entity';
 import { interestAcceptedEmailTemplate, interestRequestEmailTemplate } from 'src/shared/email/templates/verify-email-template';
 import { v4 as uuidv4 } from 'uuid';
 import { ChatService } from '../chat/chat.service';
+import { AuditEmitter } from '../audit/audit.emitter';
+import { AuditEventType } from '../audit/enums/audit-event-type.enum';
+import { AuditEntityType } from '../audit/enums/audit-entity-type.enum';
+import { UserSettings } from '../settings/entity/user-settings.entity';
+
+/** Anti-spam cap on interests a member can send in any 24-hour window. */
+export const MAX_INTERESTS_PER_DAY = 50;
 
 @Injectable()
 export class InterestsService {
@@ -17,9 +25,12 @@ export class InterestsService {
     @InjectRepository(Interest) private readonly interestRepo: Repository<Interest>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Match) private readonly matchRepo: Repository<Match>,
+    @InjectRepository(UserBlock) private readonly blockRepo: Repository<UserBlock>,
+    @InjectRepository(UserSettings) private readonly settingsRepo: Repository<UserSettings>,
     private emailService: EmailService,
     private logger: CustomLoggerService,
-    private chatService: ChatService
+    private chatService: ChatService,
+    private readonly auditEmitter: AuditEmitter,
   ) {}
 
   async getReceived(userId: string) {
@@ -51,23 +62,45 @@ export class InterestsService {
     return this.formatInterests(interests);
   }
 
-  async send(fromUserId: string, toUserId: string, message?: string, domain?: string) {
+  /**
+   * Express interest. Compatibility scores never gate this — only self-interest, inactive or blocked
+   * members, an existing open/answered interest, and the anti-spam daily cap do.
+   * A previously *withdrawn* interest is re-opened (same row; the audit log keeps the history).
+   */
+  async send(fromUserId: string, toUserId: string, message?: string, domain?: string, source?: InterestSource) {
     if (fromUserId === toUserId) {
       throw new BadRequestException('Cannot send interest to yourself');
     }
-    const existing = await this.interestRepo.findOne({
-      where: { fromUserId, toUserId },
-    });
-    if (existing) {
+
+    const existing = await this.interestRepo.findOne({ where: { fromUserId, toUserId } });
+    if (existing && existing.status !== 'withdrawn') {
       throw new BadRequestException('Interest already sent to this user');
     }
 
     const sender = await this.userRepo.findOne({
-      where: {id: fromUserId, is_active: 1}
+      where: { id: fromUserId, is_active: 1 },
+      relations: ['profile', 'profile.photos'],
     });
-    const recipient = await this.userRepo.findOne({
-      where: {id: toUserId, is_active: 1}
-    });
+    const recipient = await this.userRepo.findOne({ where: { id: toUserId, is_active: 1 } });
+    if (!sender) throw new ForbiddenException('Your account is not active');
+    if (!recipient) throw new NotFoundException('This member is not available');
+
+    if (await this.isBlockedBetween(fromUserId, toUserId)) {
+      throw new ForbiddenException('You cannot send interest to this member');
+    }
+
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const sentToday = await this.interestRepo
+      .createQueryBuilder('i')
+      .where('i.fromUserId = :fromUserId', { fromUserId })
+      .andWhere('i.createdAt >= :since', { since })
+      .getCount();
+    if (sentToday >= MAX_INTERESTS_PER_DAY) {
+      throw new HttpException(
+        `You can send up to ${MAX_INTERESTS_PER_DAY} interests in 24 hours. Please try again later.`,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
 
     const match = await this.matchRepo.findOne({
       where: [
@@ -91,19 +124,23 @@ export class InterestsService {
       await this.matchRepo.save(newMatch);
     }
 
-    let existing1 = null;
     const interestGuid = uuidv4();
-    existing1 = await this.interestRepo.findOne({
-      where: { fromUserId, toUserId },
-    });
-    if (existing1) {
-      existing1.message = message;
+    let interest: Interest;
+    if (existing) {
+      // Re-opening a withdrawn interest.
+      Object.assign(interest = existing, {
+        status: 'pending', message, guid: interestGuid, source: source ?? existing.source,
+        isRead: false, readAt: null, respondedAt: null, withdrawnAt: null,
+      });
+    } else {
+      interest = this.interestRepo.create({ fromUserId, toUserId, message, guid: interestGuid, source: source ?? null });
     }
-    else{
-      existing1 = this.interestRepo.create({ fromUserId, toUserId, message, guid: interestGuid });
-    }
-    const interestResponse = await this.interestRepo.save(existing1);    
-    // Send verification email
+    const interestResponse = await this.interestRepo.save(interest);
+
+    this.audit(AuditEventType.INTEREST_SENT, fromUserId, interestResponse, { status: 'pending', source: interestResponse.source });
+
+    // Interest email — skipped when the recipient opted out (Settings → "Interest notifications").
+    if (await this.wantsInterestEmails(recipient.id)) {
     this.logger.debug('Sending email...');
     await this.emailService.sendEmail({
       to: recipient.email,
@@ -112,13 +149,13 @@ export class InterestsService {
       html: interestRequestEmailTemplate({
         recipientFirstName: recipient.first_name,
         senderFirstName: sender.first_name,
-        senderProfileId: sender.profile.profileCode,
-        senderAge: sender.profile.age,
-        senderLocation: sender.profile.city,
-        senderProfession: sender.profile.occupationTitle,
-        senderPhotoUrl: (sender.profile.photos.length > 0 && sender.profile.photos[0].url) ?? "https://storage.googleapis.com/inv-images/profile/userview.png",
+        senderProfileId: sender.profile?.profileCode,
+        senderAge: sender.profile?.age,
+        senderLocation: sender.profile?.city,
+        senderProfession: sender.profile?.occupationTitle,
+        senderPhotoUrl: sender.profile?.photos?.[0]?.url ?? "https://storage.googleapis.com/inv-images/profile/userview.png",
         acceptUrl: `${domain}/accept/${interestResponse.id}/${interestGuid}`,
-        viewProfileUrl: `${domain}/view/${sender.profile.profileCode}`,
+        viewProfileUrl: `${domain}/view/${sender.profile?.profileCode}`,
         domain: domain
     }),
       history: {
@@ -129,41 +166,24 @@ export class InterestsService {
       }
     });
     this.logger.debug('Email has been sent');
+    }
 
     return interestResponse;
   }
 
+  /** Accept from the app (recipient only). Same follow-up as the email link: chat + notify sender. */
   async accept(interestId: string, userId: string) {
-    const interest = await this.interestRepo.findOne({ where: { id: interestId } });
+    const interest = await this.interestRepo.findOne({
+      where: { id: interestId },
+      relations: ['fromUser', 'fromUser.profile'],
+    });
     if (!interest) throw new NotFoundException('Interest not found');
     if (interest.toUserId !== userId) throw new ForbiddenException('Cannot accept an interest not addressed to you');
     if (interest.status !== 'pending') throw new BadRequestException(`Interest is already ${interest.status}`);
-    interest.status = 'accepted';
-    const response =await this.interestRepo.save(interest);
-
-    const match = await this.matchRepo.findOne({
-      where: [
-        { userId: response.fromUserId, matchedUserId: response.toUserId },
-        { userId: response.toUserId, matchedUserId: response.fromUserId },
-      ],
-    });
-    if (match) {
-      match.status = 'connected';
-      match.currentStep = 3,
-      await this.matchRepo.save(match);
+    if (await this.isBlockedBetween(interest.fromUserId, interest.toUserId)) {
+      throw new ForbiddenException('You cannot accept an interest from this member');
     }
-    else{
-      const newMatch = this.matchRepo.create({
-        userId: response.fromUserId,
-        matchedUserId: response.toUserId,
-        matchPercentage: 0,
-        status: 'connected',
-        currentStep: 3,
-      });
-      await this.matchRepo.save(newMatch);
-    }
-
-    return response;
+    return this.completeAcceptance(interest);
   }
 
   async findPendingInterest(interestId: string, guid: string) {
@@ -189,13 +209,87 @@ export class InterestsService {
       return { success: false, message: 'Interest already accepted' };
     }
 
-    if (interest.status !== 'pending') {
+    if (interest.status !== 'pending' || await this.isBlockedBetween(interest.fromUserId, interest.toUserId)) {
       return { success: false, message: 'Invalid or expired link' };
     }
 
-    interest.status    = 'accepted';
-    interest.acceptedOn = new Date();
+    await this.completeAcceptance(interest);
+    const requester = interest.fromUser;
+    return {
+      success:         true,
+      message:         'Interest accepted successfully',
+      requesterName:   `${requester?.first_name ?? ''} ${requester?.last_name ?? ''}`.trim(),
+      requesterUserId: requester?.id,
+    };
+  }
+
+  /** Recipient declines a pending interest. The sender sees "Declined" on their dashboard (no email). */
+  async decline(interestId: string, userId: string) {
+    const interest = await this.interestRepo.findOne({ where: { id: interestId } });
+    if (!interest) throw new NotFoundException('Interest not found');
+    if (interest.toUserId !== userId) throw new ForbiddenException('Cannot decline an interest not addressed to you');
+    if (interest.status !== 'pending') throw new BadRequestException(`Interest is already ${interest.status}`);
+    const now = new Date();
+    Object.assign(interest, { status: 'declined', respondedAt: now, isRead: true, readAt: interest.readAt ?? now });
     const saved = await this.interestRepo.save(interest);
+    this.audit(AuditEventType.INTEREST_REJECTED, userId, saved, { status: 'declined' }, { status: 'pending' });
+    return saved;
+  }
+
+  /** Sender retracts a pending interest. Kept as history with status "withdrawn". */
+  async withdraw(interestId: string, userId: string) {
+    const interest = await this.interestRepo.findOne({ where: { id: interestId } });
+    if (!interest) throw new NotFoundException('Interest not found');
+    if (interest.fromUserId !== userId) throw new ForbiddenException('You can only withdraw interests you sent');
+    if (interest.status !== 'pending') throw new BadRequestException(`Interest is already ${interest.status}`);
+    Object.assign(interest, { status: 'withdrawn', withdrawnAt: new Date() });
+    const saved = await this.interestRepo.save(interest);
+
+    // The pair is no longer "interested" in the match funnel.
+    await this.matchRepo
+      .createQueryBuilder()
+      .update(Match)
+      .set({ status: 'suggested', currentStep: 0 })
+      .where('status = :status', { status: 'interested' })
+      .andWhere('((userId = :a AND matchedUserId = :b) OR (userId = :b AND matchedUserId = :a))', { a: saved.fromUserId, b: saved.toUserId })
+      .execute();
+
+    this.audit(AuditEventType.INTEREST_WITHDRAWN, userId, saved, { status: 'withdrawn' }, { status: 'pending' });
+    return saved;
+  }
+
+  /** Recipient opened the interest ("New" → "Viewed"). Idempotent. */
+  async markRead(interestId: string, userId: string) {
+    const interest = await this.interestRepo.findOne({ where: { id: interestId } });
+    if (!interest) throw new NotFoundException('Interest not found');
+    if (interest.toUserId !== userId) throw new ForbiddenException('You can only mark interests sent to you');
+    if (interest.isRead) return interest;
+    Object.assign(interest, { isRead: true, readAt: new Date() });
+    const saved = await this.interestRepo.save(interest);
+    this.audit(AuditEventType.INTEREST_VIEWED, userId, saved, { isRead: true }, { isRead: false });
+    return saved;
+  }
+
+  /** True when either member has an active block on the other. */
+  async isBlockedBetween(a: string, b: string): Promise<boolean> {
+    const count = await this.blockRepo
+      .createQueryBuilder('b')
+      .where('b.isActive = 1')
+      .andWhere('((b.blockedByUserId = :a AND b.blockedUserId = :b) OR (b.blockedByUserId = :b AND b.blockedUserId = :a))', { a, b })
+      .getCount();
+    return count > 0;
+  }
+
+  // ── internals ─────────────────────────────────────────────────────────────
+
+  /** pending → accepted, sync the match funnel, open the conversation and email the requester. */
+  private async completeAcceptance(interest: Interest) {
+    const now = new Date();
+    Object.assign(interest, {
+      status: 'accepted', acceptedOn: now, respondedAt: now, isRead: true, readAt: interest.readAt ?? now,
+    });
+    const saved = await this.interestRepo.save(interest);
+    this.audit(AuditEventType.INTEREST_ACCEPTED, saved.toUserId, saved, { status: 'accepted' }, { status: 'pending' });
 
     // Sync match status to 'connected'
     const match = await this.matchRepo.findOne({
@@ -221,7 +315,7 @@ export class InterestsService {
     }
 
     // Load acceptor (toUser) to personalise the notification email
-    const acceptor = await this.userRepo.findOne({ 
+    const acceptor = await this.userRepo.findOne({
       where: { id: saved.toUserId },
       relations: ['profile']
     });
@@ -242,7 +336,7 @@ export class InterestsService {
 
     // Notify the original requester (fromUser)
     const requester = interest.fromUser;
-    if (requester?.email) {
+    if (requester?.email && await this.wantsInterestEmails(requester.id)) {
       try {
         await this.emailService.sendEmail({
           to:      requester.email,
@@ -265,23 +359,29 @@ export class InterestsService {
       }
     }
 
-    return {
-      success:         true,
-      message:         'Interest accepted successfully',
-      requesterName:   `${requester?.first_name ?? ''} ${requester?.last_name ?? ''}`.trim(),
-      requesterUserId: requester?.id,
-    };
+    return saved;
   }
 
-  async decline(interestId: string, userId: string) {
-    const interest = await this.interestRepo.findOne({ where: { id: interestId } });
-    if (!interest) throw new NotFoundException('Interest not found');
-    if (interest.toUserId !== userId) throw new ForbiddenException('Cannot decline an interest not addressed to you');
-    if (interest.status !== 'pending') throw new BadRequestException(`Interest is already ${interest.status}`);
-    interest.status = 'declined';
-    return this.interestRepo.save(interest);
+  /** Respects the member's "email me about interests" setting (default on when no settings row exists). */
+  private async wantsInterestEmails(userId: string): Promise<boolean> {
+    const settings = await this.settingsRepo.findOne({ where: { userId }, select: ['id', 'emailInterests'] });
+    return settings?.emailInterests !== false;
   }
 
+  /** Fire-and-forget audit trail entry for an interest status change. */
+  private audit(
+    eventType: AuditEventType, userId: string, interest: Interest,
+    newValue: Record<string, unknown>, oldValue?: Record<string, unknown>,
+  ): void {
+    this.auditEmitter.emit({
+      eventType,
+      entityType: AuditEntityType.INTEREST,
+      entityId: interest.id,
+      userId,
+      oldValue: oldValue ?? null,
+      newValue: { ...newValue, fromUserId: interest.fromUserId, toUserId: interest.toUserId },
+    });
+  }
 
   private formatInterests(interests: Interest[]) {
     return interests.map((i) => this.formatInterest(i));
