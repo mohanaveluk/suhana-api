@@ -620,6 +620,66 @@ export class MatchesService {
     });
   }
 
+  /**
+   * Horoscope compatibility for many partners at once, from the report cache ONLY — never generates a
+   * new (AI) report. Uses the same validity rules as findCachedReport (active row + unchanged birth
+   * details). For list views such as the My Interests dashboard.
+   */
+  async getCachedHoroscopeSummaries(
+    me: { userId: string; profile: Profile },
+    partners: { userId: string; profile: Profile }[],
+  ): Promise<Map<string, CachedHoroscopeSummary>> {
+    const out = new Map<string, CachedHoroscopeSummary>();
+    if (!partners.length) return out;
+    const ids = [...new Set(partners.map(p => p.userId))];
+
+    const rows = await this.horoscopeReportRepo
+      .createQueryBuilder('r')
+      .where('r.isActive = :active', { active: true })
+      .andWhere(
+        '((r.userOneId = :me AND r.userTwoId IN (:...ids)) OR (r.userTwoId = :me AND r.userOneId IN (:...ids)))',
+        { me: me.userId, ids },
+      )
+      .orderBy('r.createdAt', 'DESC')
+      .getMany();
+
+    // Both sides of each comparison come from the same driver/column types, so a plain string form is enough.
+    const day = (v: unknown) =>
+      v == null ? null
+        : v instanceof Date ? `${v.getFullYear()}-${v.getMonth() + 1}-${v.getDate()}`
+        : String(v).slice(0, 10);
+    const sameBirth = (stored: [unknown, unknown, unknown], h: ReturnType<typeof this.extractHoroscopeData>) =>
+      day(stored[0]) === day(h.dateOfBirth) && (stored[1] ?? null) === h.timeOfBirth && (stored[2] ?? null) === h.placeOfBirth;
+
+    const mine = this.extractHoroscopeData(me.profile);
+    for (const partner of partners) {
+      const theirs = this.extractHoroscopeData(partner.profile);
+      const report = rows.find(r =>
+        (r.userOneId === me.userId && r.userTwoId === partner.userId
+          && sameBirth([r.userOneDateOfBirth, r.userOneTimeOfBirth, r.userOnePlaceOfBirth], mine)
+          && sameBirth([r.userTwoDateOfBirth, r.userTwoTimeOfBirth, r.userTwoPlaceOfBirth], theirs))
+        || (r.userOneId === partner.userId && r.userTwoId === me.userId
+          && sameBirth([r.userOneDateOfBirth, r.userOneTimeOfBirth, r.userOnePlaceOfBirth], theirs)
+          && sameBirth([r.userTwoDateOfBirth, r.userTwoTimeOfBirth, r.userTwoPlaceOfBirth], mine)));
+
+      if (!report) {
+        out.set(partner.userId, {
+          status: mine.dateOfBirth && theirs.dateOfBirth ? 'not_analyzed' : 'not_available',
+        });
+        continue;
+      }
+      const km = report.report?.kundliMatching ?? {};
+      const category: string = report.report?.finalRecommendation?.category || km.compatibilityCategory || '';
+      out.set(partner.userId, {
+        status: 'analyzed',
+        totalScore: typeof km.totalScore === 'number' ? km.totalScore : undefined,
+        maxScore: typeof km.maxScore === 'number' ? km.maxScore : 36,
+        category: category || undefined,
+      });
+    }
+    return out;
+  }
+
   // ─── Horoscope cache invalidation ──────────────────────────────────────────
 
   /**
@@ -1403,4 +1463,14 @@ export class MatchesService {
         : null,
     };
   }
+}
+
+/** Cached horoscope result for one pair (see MatchesService.getCachedHoroscopeSummaries). */
+export interface CachedHoroscopeSummary {
+  /** analyzed: a valid cached report exists · not_analyzed: both have birth details, no report yet · not_available: birth details missing */
+  status: 'analyzed' | 'not_analyzed' | 'not_available';
+  totalScore?: number;
+  maxScore?: number;
+  /** The report's own recommendation category (e.g. "Excellent Match"). */
+  category?: string;
 }

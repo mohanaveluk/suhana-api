@@ -330,6 +330,46 @@ export class PersonalityService {
     return types;
   }
 
+  /**
+   * Personality compatibility between one member and many others, using the same provider as
+   * getCompatibility() — for list views (My Interests). Two queries regardless of list size.
+   * Members without a completed assessment get only their (null) type, never a score.
+   */
+  async getCompatibilitySummaries(
+    myProfileId: string,
+    otherProfileIds: string[],
+  ): Promise<{ myType: string | null; byProfile: Map<string, PersonalityCompatibilitySummary> }> {
+    const byProfile = new Map<string, PersonalityCompatibilitySummary>();
+    const mine = await this.getLatestCompletedAssessment(myProfileId);
+    const ids = [...new Set(otherProfileIds.filter(id => id && id !== myProfileId))];
+    if (!ids.length) return { myType: mine?.personalityType ?? null, byProfile };
+
+    const rows = await this.assessmentRepo
+      .createQueryBuilder('a')
+      .where('a.status = :status', { status: AssessmentStatus.COMPLETED })
+      .andWhere('a.profileId IN (:...ids)', { ids })
+      .orderBy('a.completedDate', 'DESC')
+      .getMany();
+    const latest = new Map<string, PersonalityAssessment>();
+    for (const r of rows) if (!latest.has(r.profileId)) latest.set(r.profileId, r);
+
+    for (const id of ids) {
+      const theirs = latest.get(id);
+      if (!mine || !theirs) {
+        byProfile.set(id, { available: false, personalityType: theirs?.personalityType ?? null });
+        continue;
+      }
+      const result = await this.compatibilityProvider.evaluate(this.toSnapshot(mine), this.toSnapshot(theirs));
+      byProfile.set(id, {
+        available: true,
+        personalityType: theirs.personalityType,
+        score: result.compatibilityScore,
+        level: result.compatibilityLevel,
+      });
+    }
+    return { myType: mine?.personalityType ?? null, byProfile };
+  }
+
   // ─── Internals ─────────────────────────────────────────────────────────────
 
   private async getActiveQuestions(): Promise<PersonalityQuestion[]> {
@@ -553,4 +593,12 @@ export class PersonalityService {
     if (!lang || !translations) return base;
     return translations[lang] ?? translations[lang.split('-')[0]] ?? base;
   }
+}
+
+/** One pair's personality compatibility for list views (see getCompatibilitySummaries). */
+export interface PersonalityCompatibilitySummary {
+  available: boolean;
+  personalityType: string | null;
+  score?: number;
+  level?: string;
 }

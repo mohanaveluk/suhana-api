@@ -1,84 +1,154 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit, Optional } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { createHash } from 'crypto';
 import { CustomLoggerService } from 'src/modules/logger/custom-logger.service';
+import { readSmsConfig } from './sms.config';
+import { SmsDeliveryStatus, SmsMessage } from './entity/sms-message.entity';
+import { SMS_PROVIDER, SendSmsOptions, SmsProvider, SmsSendResult, maskPhone } from './sms.types';
+import { AppSettingsService } from '../app-settings/app-settings.service';
+import { APP_SETTING } from '../app-settings/app-settings.keys';
 
-export interface SendSmsOptions {
-  to: string;      // E.164 destination, e.g. +12105551234
-  body: string;
-  // Free-form tag for log correlation, e.g. 'MOBILE_VERIFICATION'
-  smsType?: string;
-}
+export type { SendSmsOptions, SmsSendResult } from './sms.types';
 
 /**
- * Outbound SMS.
- *
- * The project had no SMS provider wired up when this was written (the legacy OTC
- * flow in auth.service just console.logged the code), so this is the integration
- * seam: `dispatch()` is the single place a real provider gets plugged in.
- *
- * Until SMS_PROVIDER is configured the service runs in log-only mode — it reports
- * success so the surrounding flows are testable end to end, and writes the message
- * to the log. In log-only mode the message body (which contains the OTP) is only
- * logged outside production, so codes never reach production logs.
- *
- * To go live with Twilio: `npm i twilio`, set SMS_PROVIDER=twilio plus
- * TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM_NUMBER, and fill in the
- * `twilio` branch of dispatch().
+ * Outbound SMS for the whole app. Callers never see the provider (Telnyx today) — they get a
+ * standardised SmsSendResult. Never throws, never reports success unless a provider accepted
+ * the message, and never logs or stores message content in production.
  */
 @Injectable()
-export class SmsService {
-  private readonly provider = (process.env.SMS_PROVIDER ?? '').trim().toLowerCase();
+export class SmsService implements OnModuleInit {
+  constructor(
+    @Inject(SMS_PROVIDER) @Optional() private readonly provider: SmsProvider | null,
+    private readonly logger: CustomLoggerService,
+    @InjectRepository(SmsMessage) @Optional() private readonly messages?: Repository<SmsMessage>,
+    @Optional() private readonly settings?: AppSettingsService,
+  ) {}
 
-  constructor(private readonly logger: CustomLoggerService) {}
+  onModuleInit(): void {
+    const cfg = readSmsConfig();
+    if (cfg.telnyxEnabled && !this.provider?.enabled) {
+      this.logger.warn(
+        'TELNYX_ENABLED=true but TELNYX_API_KEY / TELNYX_FROM_NUMBER (E.164) are missing or invalid — SMS is disabled; OTPs fall back to email.',
+      );
+    } else if (this.provider?.name === 'telnyx') {
+      this.logger.log(`SMS: Telnyx enabled (from ${maskPhone(cfg.fromNumber)})`);
+    } else if (this.provider?.name === 'log') {
+      this.logger.log('SMS: log-only mode (development) — messages are logged, not sent');
+    } else {
+      this.logger.log('SMS: disabled — OTPs are delivered by email');
+    }
+  }
 
+  /** Site-wide admin switch (app_settings.sms_sending_enabled). Defaults to on when unset. */
+  async isSendingEnabled(): Promise<boolean> {
+    return this.settings ? this.settings.getBoolean(APP_SETTING.SMS_SENDING_ENABLED) : true;
+  }
+
+  /** A provider is configured AND the admin switch is on — i.e. send() can succeed right now. */
+  async isAvailable(): Promise<boolean> {
+    return this.isConfigured && (await this.isSendingEnabled());
+  }
+
+  /** A real provider (not log-only) is configured AND the admin switch is on. */
+  async canDeliverNow(): Promise<boolean> {
+    return this.canDeliver && (await this.isSendingEnabled());
+  }
+
+  /** Name of the active provider ('telnyx' | 'log'), or null when none is configured. */
+  get providerName(): string | null {
+    return this.provider?.enabled ? this.provider.name : null;
+  }
+
+  /** True when a real provider can deliver SMS (log-only does not count). */
+  get canDeliver(): boolean {
+    return !!this.provider?.enabled && this.provider.name !== 'log';
+  }
+
+  /** True when send() can succeed at all (real provider, or log-only in development). */
   get isConfigured(): boolean {
-    return this.provider !== '';
+    return !!this.provider?.enabled;
   }
 
-  // Never throws — a delivery failure must not roll back the caller's work.
-  // Returns whether the message was handed off to a provider successfully.
-  async sendSms(options: SendSmsOptions): Promise<boolean> {
-    const { to, body, smsType } = options;
+  async send(options: SendSmsOptions): Promise<SmsSendResult> {
+    const smsType = options.smsType ?? 'GENERIC';
+    if (!this.provider?.enabled) {
+      return { success: false, errorCode: 'SMS_DISABLED', errorMessage: 'No SMS provider configured' };
+    }
+    if (!(await this.isSendingEnabled())) {
+      this.logger.log(`SMS skipped [${smsType}] to ${maskPhone(options.to)}: sending is turned off site-wide (admin setting)`);
+      return { success: false, provider: this.provider.name, errorCode: 'SMS_DISABLED', errorMessage: 'SMS sending is turned off by an administrator' };
+    }
+
+    const record = await this.track(options, smsType);
+    let result: SmsSendResult;
     try {
-      await this.dispatch(to, body);
-      this.logger.log(
-        `SMS dispatched [${smsType ?? 'GENERIC'}] to ${this.mask(to)} via ${this.provider || 'log-only'}`,
-      );
-      return true;
+      result = await this.provider.send(options.to, options.body);
     } catch (error: any) {
-      this.logger.error(
-        `SMS send failed [${smsType ?? 'GENERIC'}] to ${this.mask(to)}: ${error?.message}`,
-        error?.stack,
-      );
-      return false;
+      // Providers are expected to return results, but never let a bug escape to the caller.
+      result = { success: false, provider: this.provider.name, errorCode: 'UNKNOWN', errorMessage: error?.message };
+    }
+
+    if (result.success) {
+      this.logger.log(`SMS accepted [${smsType}] to ${maskPhone(options.to)} via ${result.provider}${result.messageId ? ` (${result.messageId})` : ''}`);
+    } else {
+      this.logger.warn(`SMS not sent [${smsType}] to ${maskPhone(options.to)}: ${result.errorCode} — ${result.errorMessage ?? ''}`);
+    }
+    await this.finishTracking(record, result);
+    return result;
+  }
+
+  /** Backward-compatible boolean form (true only when a provider accepted the message). */
+  async sendSms(options: SendSmsOptions): Promise<boolean> {
+    return (await this.send(options)).success;
+  }
+
+  /** SMS sent to a number in the last `minutes` (all accounts) — for per-number abuse limits. */
+  async countRecentToNumber(to: string, minutes: number): Promise<number> {
+    if (!this.messages) return 0;
+    try {
+      return await this.messages.createQueryBuilder('m')
+        .where('m.recipientHash = :h', { h: this.hash(to) })
+        .andWhere('m.createdAt >= :since', { since: new Date(Date.now() - minutes * 60_000) })
+        .getCount();
+    } catch {
+      return 0;
     }
   }
 
-  private async dispatch(to: string, body: string): Promise<void> {
-    switch (this.provider) {
-      case 'twilio':
-        // Integration point — replace with the Twilio SDK call:
-        //   const client = require('twilio')(SID, TOKEN);
-        //   await client.messages.create({ to, from: FROM, body });
-        throw new Error(
-          'SMS_PROVIDER=twilio is set but the Twilio client is not implemented yet',
-        );
+  // ── tracking (best effort — tracking problems never block sending) ────────
 
-      default:
-        // Log-only mode. Guarded so OTP codes never land in production logs.
-        if (process.env.NODE_ENV !== 'production') {
-          this.logger.log(`[SMS log-only] to=${to} body="${body}"`);
-        } else {
-          this.logger.warn(
-            `SMS_PROVIDER is not configured — message to ${this.mask(to)} was not delivered`,
-          );
-        }
-        return;
+  private async track(o: SendSmsOptions, smsType: string): Promise<SmsMessage | null> {
+    if (!this.messages) return null;
+    try {
+      return await this.messages.save(this.messages.create({
+        userId: o.userId ?? null,
+        recipientMasked: maskPhone(o.to),
+        recipientHash: this.hash(o.to),
+        smsType,
+        provider: this.provider!.name,
+        status: SmsDeliveryStatus.QUEUED,
+      }));
+    } catch (e: any) {
+      this.logger.warn(`SMS tracking insert failed: ${e?.message}`);
+      return null;
     }
   }
 
-  // +12105551234 -> +1210*****34
-  private mask(mobile: string): string {
-    if (!mobile || mobile.length < 6) return '***';
-    return `${mobile.slice(0, 5)}*****${mobile.slice(-2)}`;
+  private async finishTracking(record: SmsMessage | null, result: SmsSendResult): Promise<void> {
+    if (!record || !this.messages) return;
+    try {
+      await this.messages.update(record.id, {
+        status: result.success ? SmsDeliveryStatus.ACCEPTED : SmsDeliveryStatus.FAILED,
+        providerMessageId: result.messageId ?? null,
+        errorCode: result.errorCode ?? null,
+      });
+    } catch (e: any) {
+      this.logger.warn(`SMS tracking update failed: ${e?.message}`);
+    }
+  }
+
+  private hash(to: string): string {
+    return createHash('sha256').update(to.trim()).digest('hex');
   }
 }

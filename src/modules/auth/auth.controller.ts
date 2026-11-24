@@ -222,7 +222,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'OTC sent successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized - invalid token' })
   async sendMobileOTC(@Request() req) {
-    return this.authService.sendMobileOTC(req.user.mobile);
+    return this.authService.sendMobileOTC(req.user?.mobile); // 410 Gone — retired
   }
 
 
@@ -343,7 +343,7 @@ export class AuthController {
     @Body() dto: ForgotPasswordDto,
   ): Promise<{ message: string }> {
     await this.authService.forgotPassword(dto.email);
-    return { message: 'If this email is registered, a reset code has been sent.' };
+    return { message: 'If this account is registered, a reset code has been sent to its email or verified mobile number.' };
   }
  
   // ── POST /auth/verify-reset-code ────────────────────────────────────────

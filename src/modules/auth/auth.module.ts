@@ -1,3 +1,4 @@
+import { OtpModule } from 'src/shared/otp/otp.module';
 import { Module } from '@nestjs/common';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -46,6 +47,7 @@ dotenv.config();
     }),
       LogModule,
       EmailModule,
+      OtpModule,
     // JwtModule.registerAsync({
     //   imports: [ConfigModule],
     //   inject: [ConfigService],

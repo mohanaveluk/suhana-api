@@ -1,10 +1,9 @@
 import {
-  BadRequestException, ConflictException, GoneException,
+  BadGatewayException, BadRequestException, ConflictException, GoneException,
   Injectable, NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
-import { randomInt } from 'crypto';
 import * as bcrypt from 'bcrypt';
 
 import { User } from './entity/user.entity';
@@ -21,7 +20,9 @@ import {
 } from './dto/mobile-verification.dto';
 
 import { EmailService } from 'src/shared/email/email.service';
-import { SmsService } from 'src/shared/sms/sms.service';
+import { SmsService, SmsSendResult } from 'src/shared/sms/sms.service';
+import { generateOtp, otpTtlMinutes, SMS_PER_NUMBER_MAX, SMS_PER_NUMBER_WINDOW_MINUTES } from 'src/shared/otp/otp-policy';
+import { otpSmsTemplates } from 'src/shared/otp/otp-sms.templates';
 import { mobileVerifiedEmailTemplate } from 'src/shared/email/templates/mobile-verified.template';
 import { EmailType } from '../email-history/entity/email-history.entity';
 import { CustomLoggerService } from '../logger/custom-logger.service';
@@ -39,7 +40,10 @@ export interface VerificationContext {
 export class MobileVerificationService {
   // Policy constants — referenced by Swagger docs and tests, keep them together.
   static readonly OTP_LENGTH = 6;
-  static readonly OTP_TTL_MINUTES = 10;
+  /** Default 10; override with OTP_TTL_MINUTES_MOBILE_VERIFICATION (read at call time, after env load). */
+  static get OTP_TTL_MINUTES(): number {
+    return otpTtlMinutes('MOBILE_VERIFICATION');
+  }
   static readonly MAX_ATTEMPTS = 5;
   static readonly RATE_LIMIT_MAX_SENDS = 3;
   static readonly RATE_LIMIT_WINDOW_MINUTES = 15;
@@ -80,6 +84,16 @@ export class MobileVerificationService {
     // Rate limit before doing any work — cheap guard, and it must apply to
     // resends of the same number too.
     await this.assertWithinSendRateLimit(userId);
+
+    // Without an SMS provider, or with SMS switched off site-wide by an admin, the code could
+    // never arrive — fail before changing anything.
+    if (!(await this.smsService.isAvailable())) {
+      throw new BadGatewayException('SMS verification is temporarily unavailable. Please try again later.');
+    }
+    // Per-number cap across all accounts (toll-fraud / SMS-pumping guard).
+    if (await this.smsService.countRecentToNumber(target, SMS_PER_NUMBER_WINDOW_MINUTES) >= SMS_PER_NUMBER_MAX) {
+      throw new BadRequestException('Too many verification requests for this number. Please try again later.');
+    }
 
     const isChanging = requested !== undefined && requested !== user.mobile;
 
@@ -128,9 +142,27 @@ export class MobileVerificationService {
       userAgent: ctx.userAgent ?? null,
       createdBy: user.id,
     });
-    await this.otpRepo.save(record);
+    const savedRecord = await this.otpRepo.save(record);
 
-    await this.sendVerificationSms(target, code);
+    const sent = await this.sendVerificationSms(target, code, user.id);
+    if (!sent.success) {
+      // Never report a code as sent when it wasn't; burn the unusable code.
+      await this.otpRepo.update(savedRecord.id, { status: MobileVerificationStatus.FAILED });
+      this.auditEmitter.emit({
+        eventType: AuditEventType.MOBILE_VERIFICATION_FAILED,
+        entityType: AuditEntityType.USER,
+        entityId: user.id,
+        userId: user.id,
+        description: `Verification SMS to ${this.mask(target)} not sent (${sent.errorCode})`,
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
+      });
+      if (sent.errorCode === 'INVALID_NUMBER') {
+        throw new BadRequestException('We could not send a text message to this number. Please check it and try again.');
+      }
+      // 502 (not 503): the web app treats 503/504 as "site down" and redirects.
+      throw new BadGatewayException('We could not send the verification code right now. Please try again in a few minutes.');
+    }
 
     this.auditEmitter.emit({
       eventType: AuditEventType.MOBILE_VERIFICATION_SENT,
@@ -245,7 +277,7 @@ export class MobileVerificationService {
 
     // Notifications are best-effort — a delivery failure must not undo the
     // verification the user just completed.
-    await this.sendConfirmationSms(mobileNumber);
+    await this.sendConfirmationSms(mobileNumber, user.id);
     await this.sendVerificationEmail(user, mobileNumber, verifiedAt);
 
     this.auditEmitter.emit({
@@ -332,28 +364,25 @@ export class MobileVerificationService {
    * Math.random so codes are not predictable from prior codes.
    */
   generateOtp(): string {
-    const max = 10 ** MobileVerificationService.OTP_LENGTH;
-    return randomInt(0, max).toString().padStart(MobileVerificationService.OTP_LENGTH, '0');
+    return generateOtp(MobileVerificationService.OTP_LENGTH);
   }
 
-  async sendVerificationSms(mobileNumber: string, code: string): Promise<boolean> {
-    return this.smsService.sendSms({
+  /** Sends to the (possibly unverified) number being verified — the code proves ownership. */
+  async sendVerificationSms(mobileNumber: string, code: string, userId?: string): Promise<SmsSendResult> {
+    return this.smsService.send({
       to: mobileNumber,
       smsType: 'MOBILE_VERIFICATION',
-      body:
-        `Your Aurora Matrimony verification code is ${code}.\n\n` +
-        `This code expires in ${MobileVerificationService.OTP_TTL_MINUTES} minutes.\n` +
-        `Do not share this code with anyone.`,
+      userId,
+      body: otpSmsTemplates.mobileVerification(code, MobileVerificationService.OTP_TTL_MINUTES),
     });
   }
 
-  async sendConfirmationSms(mobileNumber: string): Promise<boolean> {
+  async sendConfirmationSms(mobileNumber: string, userId?: string): Promise<boolean> {
     return this.smsService.sendSms({
       to: mobileNumber,
       smsType: 'MOBILE_VERIFIED',
-      body:
-        'Your mobile number has been verified successfully.\n\n' +
-        'Thank you for verifying your account with Aurora Matrimony.',
+      userId,
+      body: otpSmsTemplates.mobileVerified(),
     });
   }
 

@@ -32,7 +32,7 @@ async function bootstrap() {
       // Wait for database to be available
   await waitForDatabase(getDatabaseConfig());
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
 
   // Serve everything under /src/assets as /static
   app.useStaticAssets(join(__dirname, '..', 'src', 'assets'), {

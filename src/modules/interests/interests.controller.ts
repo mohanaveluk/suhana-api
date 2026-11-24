@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
@@ -46,7 +46,7 @@ export class InterestsController {
   @ApiResponse({ status: 400, description: 'Interest already sent or invalid request' })
   send(@Request() req: any, @Body() dto: SendInterestDto) {
     const domain = `${req.get('origin')}`; 
-    return this.interestsService.send(req.user.id, dto.toUserId, dto.message, domain);
+    return this.interestsService.send(req.user.id, dto.toUserId, dto.message, domain, dto.source);
   }
 
   @Patch(':id/accept')
@@ -63,5 +63,21 @@ export class InterestsController {
   @ApiResponse({ status: 403, description: 'Interest not addressed to you' })
   decline(@Param('id') id: string, @Request() req: any) {
     return this.interestsService.decline(id, req.user.id);
+  }
+
+  @Patch(':id/withdraw')
+  @ApiOperation({ summary: 'Withdraw a pending interest you sent (kept as history)' })
+  @ApiResponse({ status: 200, description: 'Interest withdrawn' })
+  @ApiResponse({ status: 403, description: 'Not your interest' })
+  withdraw(@Param('id', new ParseUUIDPipe()) id: string, @Request() req: any) {
+    return this.interestsService.withdraw(id, req.user.id);
+  }
+
+  @Patch(':id/read')
+  @ApiOperation({ summary: 'Mark a received interest as viewed' })
+  @ApiResponse({ status: 200, description: 'Interest marked as read' })
+  @ApiResponse({ status: 403, description: 'Interest not addressed to you' })
+  markRead(@Param('id', new ParseUUIDPipe()) id: string, @Request() req: any) {
+    return this.interestsService.markRead(id, req.user.id);
   }
 }

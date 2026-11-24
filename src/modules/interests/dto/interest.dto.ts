@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { INTEREST_SOURCES, InterestSource } from '../entity/interest.entity';
 
 export class SendInterestDto {
   @ApiProperty({ description: 'Target user ID to send interest to' })
@@ -7,6 +8,10 @@ export class SendInterestDto {
   toUserId: string;
 
   @ApiPropertyOptional({ description: 'Optional message to include with the interest' })
-  @IsOptional() @IsString()
+  @IsOptional() @IsString() @MaxLength(2000)
   message?: string;
+
+  @ApiPropertyOptional({ enum: INTEREST_SOURCES, description: 'Where the sender found this profile (reporting only)' })
+  @IsOptional() @IsIn([...INTEREST_SOURCES])
+  source?: InterestSource;
 }

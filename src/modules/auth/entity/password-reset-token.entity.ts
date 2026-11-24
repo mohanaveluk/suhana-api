@@ -36,6 +36,14 @@ export class PasswordResetToken {
   @Column({ type: 'boolean', default: false })
   used: boolean;
 
+  // Failed guesses against this code — locked out after OTP_MAX_ATTEMPTS (shared/otp/otp-policy.ts)
+  @Column({ type: 'int', default: 0 })
+  attemptCount: number;
+
+  // 'email' | 'sms' — how the code was delivered (no contact details stored)
+  @Column({ type: 'varchar', length: 8, default: 'email' })
+  channel: string;
+
   @CreateDateColumn()
   createdAt: Date;
 }

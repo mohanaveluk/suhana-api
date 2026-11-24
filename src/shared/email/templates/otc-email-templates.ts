@@ -439,7 +439,7 @@ export const buildOtpEmailHtml1 = (otp: string, firstName: string): string => {
   </html>`.trim();
 }
 
-export const buildOtpEmailHtml = (otp: string, firstName: string): string => {
+export const buildOtpEmailHtml = (otp: string, firstName: string, expiresInMinutes = 5): string => {
     const year = new Date().getFullYear();
     const heartIconSrc  = "https://storage.googleapis.com/inv-images/home/fav-flrnd.png"; //getHeartIconBase64();
     const username = firstName?.toLocaleLowerCase() === "unknown" ? "User": firstName;
@@ -505,7 +505,7 @@ export const buildOtpEmailHtml = (otp: string, firstName: string): string => {
               <p style="margin:0 0 24px;font-size:15px;color:#3d2c2e;line-height:1.7;font-family:Arial,Helvetica,sans-serif;">
                 Dear <strong>${username}</strong>,<br/><br/>
                 We received a request to reset the password for your <strong style="color:#a20000;">Aurora Matrimony</strong> account.
-                Use the code below — it is valid for <strong>5 minutes</strong>.
+                Use the code below — it is valid for <strong>${expiresInMinutes} minutes</strong>.
               </p>
   
               <!-- OTP block -->
@@ -539,7 +539,7 @@ export const buildOtpEmailHtml = (otp: string, firstName: string): string => {
                                   color:#6e0000;text-transform:uppercase;letter-spacing:0.7px;">
                           Expires in
                         </p>
-                        <p style="margin:0;font-size:14px;color:#3d2c2e;font-weight:600;font-family:Arial,Helvetica,sans-serif;">5 minutes</p>
+                        <p style="margin:0;font-size:14px;color:#3d2c2e;font-weight:600;font-family:Arial,Helvetica,sans-serif;">${expiresInMinutes} minutes</p>
                       </td>
                     </tr></table>
                   </td>

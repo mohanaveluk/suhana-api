@@ -41,6 +41,7 @@ import { TestimonialsModule } from './modules/testimonials/testimonials.module';
 import { MediaModule } from './modules/media/media.module';
 import { SearchModule } from './modules/search/search.module';
 import { ProfileVisitsModule } from './modules/profile-visits/profile-visits.module';
+import { MemberInteractionsModule } from './modules/member-interactions/member-interactions.module';
 import { PersonalityModule } from './modules/personality/personality.module';
 
 const envFilePath = process.env.NODE_ENV === 'production'
@@ -92,6 +93,7 @@ const envFilePath = process.env.NODE_ENV === 'production'
     MediaModule,
     SearchModule,
     ProfileVisitsModule,
+    MemberInteractionsModule,
     PersonalityModule,
   ],
   controllers: [AppController],
