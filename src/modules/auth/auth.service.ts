@@ -38,6 +38,9 @@ import { ValidateLoginOtcDto } from './dto/login-otc.dto';
 import { Profile } from '../user/entity';
 import { customAlphabet, nanoid } from 'nanoid';
 import { EmailType } from '../email-history/entity/email-history.entity';
+import { MoreThanOrEqual } from 'typeorm';
+import { OtpDeliveryService } from 'src/shared/otp/otp-delivery.service';
+import { OTP_MAX_ATTEMPTS, OTP_RESEND_MAX, OTP_RESEND_WINDOW_MINUTES, generateOtp, otpTtlMinutes } from 'src/shared/otp/otp-policy';
 
 
 @Injectable()
@@ -66,7 +69,8 @@ export class AuthService {
     private emailService: EmailService,
     private commonService: CommonService,
     private userLoginHistoryService: UserLoginHistoryService,
-    private logger: CustomLoggerService
+    private logger: CustomLoggerService,
+    private otpDelivery: OtpDeliveryService,
   ) {}
 
   async register(registerDto: RegisterDto, domain: string) : Promise<Record<string, any>> {
@@ -357,11 +361,13 @@ export class AuthService {
 
   }
 
-  // ── Passwordless login STEP 1: email a one-time sign-in code ───────────────
+  // ── Passwordless login STEP 1: send a one-time sign-in code ────────────────
+  // Delivered by SMS when the account has a verified mobile and SMS is enabled,
+  // otherwise (or if SMS fails) by email — exactly as before.
   // Always resolves with the same generic message regardless of whether the
-  // email exists / is eligible (prevents account-enumeration).
+  // email exists / is eligible / is rate-limited (prevents account-enumeration).
   async sendLoginOtc(email: string, domain: string): Promise<{ message: string }> {
-    const genericMessage = 'If this email is registered, a one-time login code has been sent.';
+    const genericMessage = 'If this account is registered, a one-time login code has been sent to its email or verified mobile number.';
 
     const user = await this.userRepository.findOne({
       where: { email, is_deleted: false },
@@ -373,37 +379,74 @@ export class AuthService {
       return { message: genericMessage };
     }
 
-    // Invalidate any previously-issued, still-unused codes for this email
-    await this.loginOtcRepo.delete({ email, used: false });
+    if (await this.otcResendLimitReached(this.loginOtcRepo, email)) {
+      this.logger.warn(`Login OTC resend limit reached for user ${user.id}`);
+      return { message: genericMessage };
+    }
 
-    const code = this.generateOTC();
+    // Invalidate previously-issued, still-unused codes (kept, expired, so resends can be counted)
+    await this.loginOtcRepo.update({ email, used: false }, { expiresAt: new Date() });
+
+    const ttl = otpTtlMinutes('LOGIN');
+    const code = generateOtp();
     const codeHash = await bcrypt.hash(code, 10);
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-
-    await this.loginOtcRepo.save(
-      this.loginOtcRepo.create({ email, codeHash, expiresAt, used: false }),
+    const record = await this.loginOtcRepo.save(
+      this.loginOtcRepo.create({ email, codeHash, expiresAt: new Date(Date.now() + ttl * 60_000), used: false }),
     );
 
-    await this.emailService.sendEmail({
-      to: user.email,
-      subject: 'Aurora - Your one-time login code',
-      html: loginOtpEmailTemplate({
-        otp: code,
-        firstName: user.first_name,
-        email: user.email,
-        expiresInMinutes: 15,
-        domain,
+    const channel = await this.otpDelivery.deliverAccountOtp({
+      purpose: 'LOGIN',
+      user,
+      code,
+      ttlMinutes: ttl,
+      sendEmail: () => this.emailService.sendEmail({
+        to: user.email,
+        subject: 'Aurora - Your one-time login code',
+        html: loginOtpEmailTemplate({
+          otp: code,
+          firstName: user.first_name,
+          email: user.email,
+          expiresInMinutes: ttl,
+          domain,
+        }),
+        history: {
+          emailType: EmailType.LOGIN_OTC,
+          fromUserId: user.id,
+          toUserId: user.id,
+          createdBy: user.id,
+        },
       }),
-      history: {
-        emailType: EmailType.LOGIN_OTC,
-        fromUserId: user.id,
-        toUserId: user.id,
-        createdBy: user.id,
-      },
     });
+    if (channel !== 'email') await this.loginOtcRepo.update(record.id, { channel });
 
-    this.logger.debug(`Login OTC issued for user: '${user.email}'`);
+    this.logger.debug(`Login OTC issued for user ${user.id} via ${channel}`);
     return { message: genericMessage };
+  }
+
+  /** True when OTP_RESEND_MAX codes were already issued for this email in the window. */
+  private async otcResendLimitReached(
+    repo: Repository<LoginOtc> | Repository<PasswordResetToken>,
+    email: string,
+  ): Promise<boolean> {
+    const since = new Date(Date.now() - OTP_RESEND_WINDOW_MINUTES * 60_000);
+    const count = await (repo as Repository<LoginOtc>).count({ where: { email, createdAt: MoreThanOrEqual(since) } });
+    return count >= OTP_RESEND_MAX;
+  }
+
+  /**
+   * Counts a wrong guess; burns the code once OTP_MAX_ATTEMPTS is reached.
+   * Returns the guesses left.
+   */
+  private async registerFailedOtpAttempt(
+    repo: Repository<LoginOtc> | Repository<PasswordResetToken>,
+    record: { id: string; attemptCount: number },
+  ): Promise<number> {
+    const attempts = (record.attemptCount ?? 0) + 1;
+    await (repo as Repository<LoginOtc>).update(record.id, {
+      attemptCount: attempts,
+      ...(attempts >= OTP_MAX_ATTEMPTS ? { expiresAt: new Date() } : {}),
+    });
+    return Math.max(0, OTP_MAX_ATTEMPTS - attempts);
   }
 
   // ── Passwordless login STEP 2: validate the code and issue JWT tokens ──────
@@ -417,13 +460,22 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired login code.');
     }
 
+    if ((record.attemptCount ?? 0) >= OTP_MAX_ATTEMPTS) {
+      throw new BadRequestException('Too many incorrect attempts. Please request a new login code.');
+    }
+
     if (record.expiresAt < new Date()) {
       throw new GoneException('Login code has expired. Please request a new one.');
     }
 
     const isMatch = await bcrypt.compare(dto.code, record.codeHash);
     if (!isMatch) {
-      throw new BadRequestException('Incorrect login code. Please try again.');
+      const left = await this.registerFailedOtpAttempt(this.loginOtcRepo, record);
+      throw new BadRequestException(
+        left > 0
+          ? 'Incorrect login code. Please try again.'
+          : 'Too many incorrect attempts. Please request a new login code.',
+      );
     }
 
     // Load the account (with role for the token payload) and re-check eligibility
@@ -435,9 +487,12 @@ export class AuthService {
       throw new UnauthorizedException('Oops, User is disabled or email is not verified.');
     }
 
-    // Consume the code so it cannot be replayed
-    record.used = true;
-    await this.loginOtcRepo.save(record);
+    // Consume the code so it cannot be replayed — conditional update, so two
+    // concurrent requests with the same code cannot both succeed.
+    const consumed = await this.loginOtcRepo.update({ id: record.id, used: false }, { used: true });
+    if (!consumed.affected) {
+      throw new BadRequestException('Invalid or expired login code.');
+    }
 
     // Record login — mirrors the password login flow
     const loginTime = new Date();
@@ -538,97 +593,30 @@ export class AuthService {
 
   
 
+  /** 6-digit code for email verification and friends — crypto.randomInt, not Math.random. */
   private generateOTC(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return generateOtp();
   }
 
-  async sendMobileOTC(mobile: string): Promise<{ message: string }> {
-    try {
-      // Deactivate any existing OTCs for this mobile
-      await this.otcRepository.update(
-        { mobile, is_active: 1 },
-        { is_active: 0 }
-      );
-
-      const code = this.generateOTC();
-      const otc = this.otcRepository.create({
-        mobile,
-        code,
-        expiry_datetime: addMinutes(new Date(), 10), // 10 minutes expiry
-      });
-
-      await this.otcRepository.save(otc);
-
-      // TODO: Integrate with SMS service
-      console.log(`OTC for ${mobile}: ${code}`);
-
-      return { message: 'OTC sent successfully' };
-    } catch (error) {
-      throw error;
-    }
+  // ── Legacy mobile-number login (retired) ──────────────────────────────────
+  // These endpoints stored plaintext codes, had no attempt limit, revealed whether a
+  // number was registered, and validateOTC could create an account and issue a JWT for
+  // any number. No client uses them. Routes are kept (contract) but answer 410 Gone.
+  // SMS OTP now lives in login/send-otc (verified mobiles) and /users/mobile/*.
+  private legacyMobileGone(): never {
+    throw new GoneException('Mobile-number login has been retired. Use the one-time login code (email or verified mobile) instead.');
   }
 
-  async validateOTC(validateOTCDto: ValidateOTCDto): Promise<{ access_token?: string; message: string }> {
-    try {
-      const otc = await this.otcRepository.findOne({
-        where: {
-          mobile: validateOTCDto.mobile,
-          code: validateOTCDto.code,
-          is_active: 1,
-        },
-      });
-
-      if (!otc) {
-        throw new BadRequestException('Invalid OTC');
-      }
-
-      if (new Date() > otc.expiry_datetime) {
-        throw new BadRequestException('OTC has expired');
-      }
-
-      // Deactivate the OTC
-      otc.is_active = 0;
-      await this.otcRepository.save(otc);
-
-      // Find or create user
-      let user = await this.userRepository.findOne({
-        where: { mobile: validateOTCDto.mobile },
-      });
-
-      if (!user) {
-        user = this.userRepository.create({
-          mobile: validateOTCDto.mobile,
-          created_at: new Date(),
-        });
-        await this.userRepository.save(user);
-      }
-
-      // Generate JWT token
-      const payload = { sub: user.id, mobile: user.mobile };
-      return {
-        access_token: this.jwtService.sign(payload),
-        message: 'OTC validated successfully',
-      };
-    } catch (error) {
-      throw error;
-    }
+  async sendMobileOTC(_mobile: string): Promise<{ message: string }> {
+    this.legacyMobileGone();
   }
 
-  async loginWithMobile(mobileLoginDto: MobileLoginDto): Promise<{ message: string }> {
-    try {
-      const user = await this.userRepository.findOne({
-        where: { mobile: mobileLoginDto.mobile },
-      });
+  async validateOTC(_dto: ValidateOTCDto): Promise<{ access_token?: string; message: string }> {
+    this.legacyMobileGone();
+  }
 
-      if (!user) {
-        throw new BadRequestException('Mobile number not registered');
-      }
-
-      return this.sendMobileOTC(mobileLoginDto.mobile);
-      
-    } catch (error) {
-      throw error;
-    }
+  async loginWithMobile(_dto: MobileLoginDto): Promise<{ message: string }> {
+    this.legacyMobileGone();
   }
 
   private async generateResetToken(userId: string): Promise<string> {
@@ -793,45 +781,56 @@ export class AuthService {
     }
   }
 
-  // ── STEP 1: Forgot password — generate and email OTP ─────────────────────
+  // ── STEP 1: Forgot password — generate and deliver OTP ───────────────────
+  // SMS when the account has a verified mobile and SMS is enabled; otherwise
+  // (or if SMS fails) email, exactly as before.
   async forgotPassword(email: string): Promise<void> {
     // Look up the user — but DON'T throw if not found (prevents enumeration)
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) return; // silently return — frontend sees the same 200 either way
- 
-    // Invalidate any existing unused tokens for this email
-    await this.tokenRepo.delete({ email, used: false });
- 
-    // Generate a cryptographically-safe 6-digit OTP
-    const otp = this.generateOTC();
- 
+
+    // Silent resend limit — same 200 response, nothing is sent
+    if (await this.otcResendLimitReached(this.tokenRepo, email)) {
+      this.logger.warn(`Password reset resend limit reached for user ${user.id}`);
+      return;
+    }
+
+    // Invalidate existing unused tokens (kept, expired, so resends can be counted)
+    await this.tokenRepo.update({ email, used: false }, { expiresAt: new Date() });
+
+    const ttl = otpTtlMinutes('PASSWORD_RESET');
+    const otp = generateOtp(); // crypto.randomInt
+
     // Hash the OTP before storing (treat like a password)
     const otpHash = await bcrypt.hash(otp, 10);
- 
-    // Save the token record with a 5-minute expiry
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-    await this.tokenRepo.save(
+    const record = await this.tokenRepo.save(
       this.tokenRepo.create({
         email,
         otpHash,
         resetToken: null,   // populated in step 2 after OTP verified
-        expiresAt,
+        expiresAt: new Date(Date.now() + ttl * 60_000),
         used: false,
       }),
     );
- 
-    // Send OTP email
-    await this.emailService.sendEmail({
-      to:      email,
-      subject: 'Aurora - Your password reset code',
-      html:    buildOtpEmailHtml(otp, user.first_name ?? 'there'),
-      history: {
-        emailType: EmailType.PASSWORD_RESET,
-        fromUserId: user.id,
-        toUserId: user.id,
-        createdBy: user.id          
-      }
+
+    const channel = await this.otpDelivery.deliverAccountOtp({
+      purpose: 'PASSWORD_RESET',
+      user,
+      code: otp,
+      ttlMinutes: ttl,
+      sendEmail: () => this.emailService.sendEmail({
+        to:      email,
+        subject: 'Aurora - Your password reset code',
+        html:    buildOtpEmailHtml(otp, user.first_name ?? 'there', ttl),
+        history: {
+          emailType: EmailType.PASSWORD_RESET,
+          fromUserId: user.id,
+          toUserId: user.id,
+          createdBy: user.id
+        }
+      }),
     });
+    if (channel !== 'email') await this.tokenRepo.update(record.id, { channel });
   }
 
 
@@ -847,16 +846,25 @@ export class AuthService {
     if (!record) {
       throw new BadRequestException('Invalid or expired verification code.');
     }
- 
+
+    if ((record.attemptCount ?? 0) >= OTP_MAX_ATTEMPTS) {
+      throw new BadRequestException('Too many incorrect attempts. Please request a new verification code.');
+    }
+
     // Check expiry
     if (record.expiresAt < new Date()) {
       throw new GoneException('Verification code has expired. Please request a new one.');
     }
- 
+
     // Verify OTP against stored hash
     const isMatch = await bcrypt.compare(code, record.otpHash);
     if (!isMatch) {
-      throw new BadRequestException('Incorrect verification code. Please try again.');
+      const left = await this.registerFailedOtpAttempt(this.tokenRepo, record);
+      throw new BadRequestException(
+        left > 0
+          ? 'Incorrect verification code. Please try again.'
+          : 'Too many incorrect attempts. Please request a new verification code.',
+      );
     }
  
     // OTP is valid — generate a reset token (UUID) valid for 10 minutes

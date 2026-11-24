@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import {
-  BadRequestException, ConflictException, GoneException, NotFoundException,
+  BadGatewayException, BadRequestException, ConflictException, GoneException, NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
@@ -58,7 +58,12 @@ describe('MobileVerificationService', () => {
       update: jest.fn().mockResolvedValue({ affected: 1 }),
       createQueryBuilder: jest.fn(() => makeQb(0)),
     };
-    smsService = { sendSms: jest.fn().mockResolvedValue(true) };
+    smsService = {
+      isAvailable: jest.fn().mockResolvedValue(true),
+      send: jest.fn().mockResolvedValue({ success: true, provider: 'telnyx', messageId: 'm1' }),
+      sendSms: jest.fn().mockResolvedValue(true),
+      countRecentToNumber: jest.fn().mockResolvedValue(0),
+    };
     emailService = { sendEmail: jest.fn().mockResolvedValue(true) };
     auditEmitter = { emit: jest.fn() };
 
@@ -105,9 +110,10 @@ describe('MobileVerificationService', () => {
     it('sends the plaintext code by SMS with a 10-minute expiry notice', async () => {
       await service.sendVerificationOtp('u1', {});
 
-      const sms = smsService.sendSms.mock.calls[0][0];
+      const sms = smsService.send.mock.calls[0][0];
       expect(sms.to).toBe(MOBILE);
-      expect(sms.body).toMatch(/^Your Aurora Matrimony verification code is \d{6}\./);
+      expect(sms.body).toMatch(/^Aurora Matrimony: Your verification code is \d{6}\./);
+      expect(sms.smsType).toBe('MOBILE_VERIFICATION');
       expect(sms.body).toContain('expires in 10 minutes');
       expect(sms.body).toContain('Do not share this code');
     });
@@ -141,7 +147,7 @@ describe('MobileVerificationService', () => {
       ).rejects.toThrow(ConflictException);
 
       expect(otpRepo.save).not.toHaveBeenCalled();
-      expect(smsService.sendSms).not.toHaveBeenCalled();
+      expect(smsService.send).not.toHaveBeenCalled();
     });
 
     it('resets isMobileVerified to 0 when the number changes', async () => {
@@ -165,7 +171,7 @@ describe('MobileVerificationService', () => {
       await expect(service.sendVerificationOtp('u1', {})).rejects.toThrow(
         BadRequestException,
       );
-      expect(smsService.sendSms).not.toHaveBeenCalled();
+      expect(smsService.send).not.toHaveBeenCalled();
     });
 
     it('enforces the 3-sends-per-15-minutes rate limit', async () => {
@@ -175,6 +181,40 @@ describe('MobileVerificationService', () => {
         /Too many verification requests/,
       );
       expect(otpRepo.save).not.toHaveBeenCalled();
+    });
+
+    it('sends to an UNVERIFIED number (the code proves ownership) without marking it verified', async () => {
+      await service.sendVerificationOtp('u1', {});
+      expect(smsService.send).toHaveBeenCalledWith(expect.objectContaining({ to: MOBILE }));
+      expect(userRepo.save).not.toHaveBeenCalled(); // isMobileVerified stays 0 until verifyOtp
+    });
+
+    it('never reports success when the SMS was not sent (502, code burned, audit FAILED)', async () => {
+      smsService.send.mockResolvedValue({ success: false, provider: 'telnyx', errorCode: 'PROVIDER_ERROR' });
+
+      await expect(service.sendVerificationOtp('u1', {})).rejects.toThrow(BadGatewayException);
+      expect(otpRepo.update).toHaveBeenCalledWith('otp1', { status: MobileVerificationStatus.FAILED });
+      expect(auditEmitter.emit).toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: AuditEventType.MOBILE_VERIFICATION_FAILED }),
+      );
+    });
+
+    it('400s when the provider rejects the number', async () => {
+      smsService.send.mockResolvedValue({ success: false, provider: 'telnyx', errorCode: 'INVALID_NUMBER' });
+      await expect(service.sendVerificationOtp('u1', {})).rejects.toThrow(BadRequestException);
+    });
+
+    it('502s before creating a code when SMS is not configured or switched off site-wide', async () => {
+      smsService.isAvailable.mockResolvedValue(false);
+      await expect(service.sendVerificationOtp('u1', {})).rejects.toThrow(BadGatewayException);
+      expect(otpRepo.save).not.toHaveBeenCalled();
+      expect(smsService.send).not.toHaveBeenCalled();
+    });
+
+    it('enforces the per-number SMS limit across accounts', async () => {
+      smsService.countRecentToNumber.mockResolvedValue(5);
+      await expect(service.sendVerificationOtp('u1', {})).rejects.toThrow(/Too many verification requests for this number/);
+      expect(smsService.send).not.toHaveBeenCalled();
     });
 
     it('fails when there is no number on file and none supplied', async () => {
