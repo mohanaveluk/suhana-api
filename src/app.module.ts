@@ -43,6 +43,7 @@ import { SearchModule } from './modules/search/search.module';
 import { ProfileVisitsModule } from './modules/profile-visits/profile-visits.module';
 import { MemberInteractionsModule } from './modules/member-interactions/member-interactions.module';
 import { PersonalityModule } from './modules/personality/personality.module';
+import { DiscoveryModule } from './modules/discovery/discovery.module';
 
 const envFilePath = process.env.NODE_ENV === 'production'
   ? '.env'
@@ -95,6 +96,7 @@ const envFilePath = process.env.NODE_ENV === 'production'
     ProfileVisitsModule,
     MemberInteractionsModule,
     PersonalityModule,
+    DiscoveryModule,
   ],
   controllers: [AppController],
   providers: [
