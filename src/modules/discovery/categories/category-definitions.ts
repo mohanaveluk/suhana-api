@@ -90,6 +90,14 @@ export const CATEGORY_DEFINITIONS: readonly CategoryDefinition[] = [
       { key: 'homeTrial', type: 'bool' },
     ],
   },
+  {
+    slug: CATEGORY_SLUGS.MEHNDI_ARTIST,
+    specialties: ['traditional','contemporary','bridal', 'party', 'henna', 'glitter','floral', 'arabic'],
+    attributes: [
+      { key: 'teamSize', type: 'int', min: 0, max: 100 },
+      { key: 'travelsForEvents', type: 'bool' },
+    ],
+  },
 ];
 
 /**

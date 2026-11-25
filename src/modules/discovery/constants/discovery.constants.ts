@@ -56,6 +56,7 @@ export const CATEGORY_SLUGS = {
   PHOTOGRAPHY: 'photography',
   CATERING_DECORATION: 'catering-decoration',
   WEDDING_SHOPPING: 'wedding-shopping',
+  MEHNDI_ARTIST: 'mehndi-artist',
 } as const;
 
 /** Astrologer specializations (stable codes; labels live in the frontend). */
