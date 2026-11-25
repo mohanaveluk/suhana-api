@@ -212,7 +212,8 @@ export class AddAuroraDiscover1784334500000 implements MigrationInterface {
         ('matrimonial-consultant', 'Matrimonial Consultants', 'Experienced consultants who help families find a match.', 'SERVICE', 'diversity_3', NULL, 0, 40),
         ('photography', 'Photography', 'Wedding photographers and videographers.', 'SERVICE', 'photo_camera', '/discover/photography.webp', 0, 50),
         ('catering-decoration', 'Catering & Decoration', 'Caterers, decorators and event services.', 'SERVICE', 'restaurant', '/discover/catering.webp', 0, 60),
-        ('wedding-shopping', 'Wedding Shopping', 'Jewellery, attire and wedding essentials.', 'PRODUCT', 'shopping_bag', '/discover/wedding-shopping.webp', 0, 70)
+        ('wedding-shopping', 'Wedding Shopping', 'Jewellery, attire and wedding essentials.', 'PRODUCT', 'shopping_bag', '/discover/wedding-shopping.webp', 0, 70),
+        ('mehndi-artist', 'Mehndi Artists', 'Bridal mehndi, party mehndi, henna tattoos and mehndi classes.', 'SERVICE', 'brush', '/discover/mehndi-artist.webp', 0, 80)
     `);
   }
 
