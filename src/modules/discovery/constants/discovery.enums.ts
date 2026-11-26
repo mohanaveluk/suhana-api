@@ -33,6 +33,42 @@ export enum DiscoveryReviewStatus {
   HIDDEN = 'HIDDEN',
 }
 
+/** Who maintains a listing. Existing / admin-created listings are ADMIN_MANAGED. */
+export enum ManagementType {
+  ADMIN_MANAGED = 'ADMIN_MANAGED',
+  PROVIDER_MANAGED = 'PROVIDER_MANAGED',
+}
+
+/**
+ * Publication lifecycle. Admin-created listings are PUBLISHED immediately (unchanged behaviour);
+ * provider-created ones start as DRAFT → SUBMITTED → PUBLISHED (or CHANGES_REQUESTED).
+ * Only PUBLISHED listings are visible to members.
+ */
+export enum ListingStatus {
+  DRAFT = 'DRAFT',
+  SUBMITTED = 'SUBMITTED',
+  CHANGES_REQUESTED = 'CHANGES_REQUESTED',
+  PUBLISHED = 'PUBLISHED',
+}
+
+export enum ProviderMemberRole {
+  OWNER = 'OWNER',
+  STAFF = 'STAFF',
+}
+
+export enum ClaimStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  CANCELLED = 'CANCELLED',
+}
+
+/** Account type on the shared `user` table. A MEMBER may also own listings. */
+export enum AccountType {
+  MEMBER = 'MEMBER',
+  PROVIDER = 'PROVIDER',
+}
+
 export enum DiscoverySort {
   RECOMMENDED = 'recommended',
   NEAREST = 'nearest',

@@ -3,7 +3,7 @@ import {
   PrimaryColumn, UpdateDateColumn,
 } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
-import { ProviderVerificationStatus } from '../constants/discovery.enums';
+import { ListingStatus, ManagementType, ProviderVerificationStatus } from '../constants/discovery.enums';
 import { decimalTransformer } from './transformers';
 import { DiscoveryLocation } from './discovery-location.entity';
 import { DiscoveryProviderCategory } from './discovery-provider-category.entity';
@@ -26,6 +26,7 @@ import { DiscoveryAstrologerDetail } from './discovery-astrologer-detail.entity'
 @Entity('discovery_providers')
 @Index('IDX_DISCOVERY_PROVIDERS_VISIBILITY', ['isActive', 'verificationStatus', 'deletedAt'])
 @Index('IDX_DISCOVERY_PROVIDERS_USER', ['userId'])
+@Index('IDX_DISCOVERY_PROVIDERS_LISTING', ['listingStatus', 'managementType'])
 export class DiscoveryProvider {
   @PrimaryColumn({ type: 'varchar', length: 36 })
   id: string;
@@ -90,6 +91,21 @@ export class DiscoveryProvider {
 
   @Column({ type: 'varchar', length: 36, name: 'created_by', nullable: true })
   createdBy: string | null;
+
+  /** ADMIN_MANAGED (default; admin-created) or PROVIDER_MANAGED (a provider account owns it). */
+  @Column({ type: 'varchar', length: 20, name: 'management_type', default: ManagementType.ADMIN_MANAGED })
+  managementType: ManagementType;
+
+  /** Only PUBLISHED listings are visible to members. Existing listings default to PUBLISHED. */
+  @Column({ type: 'varchar', length: 20, name: 'listing_status', default: ListingStatus.PUBLISHED })
+  listingStatus: ListingStatus;
+
+  /** Admin → provider message (e.g. what to change). Visible to the provider; not to members. */
+  @Column({ type: 'varchar', length: 500, name: 'review_note', nullable: true })
+  reviewNote: string | null;
+
+  @Column({ type: 'datetime', name: 'submitted_at', nullable: true })
+  submittedAt: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

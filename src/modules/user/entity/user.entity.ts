@@ -27,8 +27,13 @@ export class User {
   @Column({nullable: true})
   mobile: string;
 
-  @Column({ type: 'enum', enum: ['bride', 'groom'] })
+  /** Null only for provider-only accounts (Aurora Discover "For Providers"); members always have it. */
+  @Column({ type: 'enum', enum: ['bride', 'groom'], nullable: true })
   gender: string;
+
+  /** MEMBER (bride/groom, default) or PROVIDER (registered via "For Providers"). Migration 1784334700000. */
+  @Column({ type: 'varchar', length: 16, name: 'account_type', default: 'MEMBER' })
+  account_type: string;
 
   @Column({ type: 'enum', enum: ['free', 'silver', 'gold', 'platinum'], default: 'platinum' })
   membership: string;

@@ -5,6 +5,8 @@ import { RolesGuard } from 'src/common/guards/roles.guard';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { AdminDiscoveryController } from './admin-discovery.controller';
 import { DiscoveryController } from './discovery.controller';
+import { ProviderPortalController } from './provider-portal.controller';
+import { IS_PUBLIC_KEY } from 'src/common/decorators/public.decorator';
 
 /** "Unauthorized modification": members can't reach admin writes; nobody reaches anything without a JWT. */
 describe('Aurora Discover authorization', () => {
@@ -19,6 +21,7 @@ describe('Aurora Discover authorization', () => {
   const adminWrites = [
     'createProvider', 'updateProvider', 'deleteProvider', 'restoreProvider', 'setVerification', 'addLocation',
     'updateLocation', 'deleteLocation', 'uploadMedia', 'deleteMedia', 'moderateReview', 'updateCategory',
+    'reviewSubmission', 'setManagement', 'decideClaim', 'listClaims',
   ] as const;
 
   it.each(adminWrites)('member (role=user) is refused on admin %s', (name) => {
@@ -36,5 +39,16 @@ describe('Aurora Discover authorization', () => {
 
   it('member controller requires a JWT on every route', () => {
     expect(Reflect.getMetadata(GUARDS_METADATA, DiscoveryController)).toEqual([JwtAuthGuard]);
+  });
+
+  it('provider portal requires a JWT everywhere except registration and the category list', () => {
+    expect(Reflect.getMetadata(GUARDS_METADATA, ProviderPortalController)).toEqual([JwtAuthGuard]);
+    const isPublic = (name: keyof ProviderPortalController) =>
+      Reflect.getMetadata(IS_PUBLIC_KEY, ProviderPortalController.prototype[name]) === true;
+    expect(isPublic('register')).toBe(true);
+    expect(isPublic('categories')).toBe(true);
+    for (const name of ['me', 'createListing', 'getListing', 'updateListing', 'submit', 'createClaim', 'uploadMedia'] as const) {
+      expect(isPublic(name)).toBe(false);
+    }
   });
 });

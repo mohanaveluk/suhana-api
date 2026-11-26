@@ -83,6 +83,8 @@ export class ProviderDetailDto extends ProviderCardDto {
   @ApiPropertyOptional({ type: ServiceDetailDto, nullable: true }) serviceDetail: ServiceDetailDto | null;
   @ApiProperty({ description: 'Contact channels that exist (values via POST /contact).' })
   contactChannels: { phone: boolean; email: boolean; website: boolean };
+  @ApiProperty({ description: 'Admin-managed listing with no owner — the business may claim it via the provider portal.' })
+  claimable: boolean;
 }
 
 export class ProviderContactDto {

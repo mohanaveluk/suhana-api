@@ -16,6 +16,10 @@ import { CategoryDto } from '../dto/discovery-detail.dto';
 import { DiscoveryAdminService } from '../services/discovery-admin.service';
 import { DiscoveryCatalogService } from '../services/discovery-catalog.service';
 import { DiscoveryReviewsService } from '../services/discovery-reviews.service';
+import { DiscoveryOwnershipService } from '../services/discovery-ownership.service';
+import {
+  AdminClaimQueryDto, DecideClaimDto, ReviewSubmissionDto, SetManagementDto,
+} from '../dto/discovery-provider-portal.dto';
 
 /** Aurora Discover administration. Every write is audited (AuditEmitter, DISCOVERY_* events). */
 @ApiTags('[Admin] Aurora Discover')
@@ -28,6 +32,7 @@ export class AdminDiscoveryController {
     private readonly admin: DiscoveryAdminService,
     private readonly catalog: DiscoveryCatalogService,
     private readonly reviews: DiscoveryReviewsService,
+    private readonly ownership: DiscoveryOwnershipService,
   ) {}
 
   // ── Categories ──────────────────────────────────────────────────────────
@@ -160,6 +165,40 @@ export class AdminDiscoveryController {
     @Param('mediaId', new ParseUUIDPipe()) mediaId: string,
   ) {
     return this.admin.deleteMedia(id, mediaId, req.user.id);
+  }
+
+  // ── Provider self-service: submissions, claims, management ─────────────
+
+  @Post('providers/:id/review')
+  @ApiOperation({
+    summary: '[Admin] Review a provider submission',
+    description: 'PUBLISH makes it visible; REQUEST_CHANGES / REJECT send a note back to the provider.',
+  })
+  async reviewSubmission(@Request() req: any, @Param('id', new ParseUUIDPipe()) id: string, @Body() dto: ReviewSubmissionDto) {
+    await this.ownership.reviewSubmission(id, dto, req.user.id);
+    return this.admin.get(id);
+  }
+
+  @Post('providers/:id/management')
+  @ApiOperation({
+    summary: '[Admin] Take over or assign a listing',
+    description: 'ADMIN_MANAGED revokes provider access; PROVIDER_MANAGED + ownerEmail assigns a verified account as owner.',
+  })
+  async setManagement(@Request() req: any, @Param('id', new ParseUUIDPipe()) id: string, @Body() dto: SetManagementDto) {
+    await this.ownership.setManagement(id, dto, req.user.id);
+    return this.admin.get(id);
+  }
+
+  @Get('claims')
+  @ApiOperation({ summary: '[Admin] "Claim this business" requests' })
+  listClaims(@Query() q: AdminClaimQueryDto) {
+    return this.ownership.adminListClaims(q);
+  }
+
+  @Patch('claims/:id')
+  @ApiOperation({ summary: '[Admin] Approve or reject a claim (approval makes the claimant the owner)' })
+  decideClaim(@Request() req: any, @Param('id', new ParseUUIDPipe()) id: string, @Body() dto: DecideClaimDto) {
+    return this.ownership.decideClaim(id, dto, req.user.id);
   }
 
   // ── Reviews ─────────────────────────────────────────────────────────────
