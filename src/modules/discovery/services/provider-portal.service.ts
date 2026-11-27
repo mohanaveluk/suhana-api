@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Optional } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -13,11 +13,18 @@ import { DiscoveryLocation } from '../entities/discovery-location.entity';
 import { DiscoveryService } from '../entities/discovery-service.entity';
 import { DiscoveryProviderMedia } from '../entities/discovery-provider-media.entity';
 import { DiscoveryCategory } from '../entities/discovery-category.entity';
+import { DiscoveryReview } from '../entities/discovery-review.entity';
+import { DiscoveryFavorite } from '../entities/discovery-favorite.entity';
 import {
   CategoryDetailInputDto, CertificationInputDto, CreateProviderDto, GeocodeQueryDto, LocationInputDto, UpdateLocationDto,
   UpdateProviderDto,
 } from '../dto/discovery-admin.dto';
-import { ClaimableQueryDto, CreateClaimDto, ProviderRegisterDto } from '../dto/discovery-provider-portal.dto';
+import {
+  ClaimableQueryDto, CreateClaimDto, ProviderOnboardDto, ProviderRegisterDto, ResendProviderVerificationDto,
+} from '../dto/discovery-provider-portal.dto';
+import { AccountRolesService } from '../../account-roles/account-roles.service';
+import { AccountRole, PROVIDER_APP_ROLES, hasAnyRole } from '../../account-roles/account-role.enum';
+import { resolveUserZone, wallClockAfterMinutes } from 'src/shared/utils/user-time.util';
 import { AdminProviderDto, DiscoveryAdminService } from './discovery-admin.service';
 import { DiscoveryCatalogService } from './discovery-catalog.service';
 import { DiscoveryOwnershipService } from './discovery-ownership.service';
@@ -29,6 +36,9 @@ import { EmailType } from '../../email-history/entity/email-history.entity';
 import { AuditEmitter } from '../../audit/audit.emitter';
 import { AuditEventType } from '../../audit/enums/audit-event-type.enum';
 import { AuditEntityType } from '../../audit/enums/audit-entity-type.enum';
+
+/** How long a provider email-verification link stays valid. */
+const VERIFY_LINK_MINUTES = 30;
 
 /** What the provider sees about their listing (admin-internal fields removed). */
 export type ProviderListingDto = Omit<AdminProviderDto, 'verificationNotes' | 'owners'> & {
@@ -63,6 +73,9 @@ export interface ProviderListingSummary {
   myRole: ProviderMemberRole;
   ratingAvg: number | null;
   ratingCount: number;
+  /** Members who saved this listing (count only — never who). */
+  savedCount: number;
+  pendingReviewCount: number;
   checklist: ListingChecklist;
   updatedAt: Date;
 }
@@ -90,7 +103,29 @@ export class ProviderPortalService {
     private readonly ownership: DiscoveryOwnershipService,
     private readonly email: EmailService,
     private readonly auditEmitter: AuditEmitter,
+    @InjectRepository(DiscoveryReview) private readonly reviewRepo?: Repository<DiscoveryReview>,
+    @InjectRepository(DiscoveryFavorite) private readonly favoriteRepo?: Repository<DiscoveryFavorite>,
+    @Optional() private readonly accountRoles?: AccountRolesService,
   ) {}
+
+  /** Reviews of a listing the caller manages: every status (so they see what's pending), names minimised. */
+  async listingReviews(userId: string, id: string, page = 1, limit = 10) {
+    await this.ownership.assertCanManage(userId, id);
+    const [rows, total] = await this.reviewRepo!.findAndCount({
+      where: { providerId: id }, order: { createdAt: 'DESC', id: 'ASC' }, skip: (page - 1) * limit, take: limit,
+    });
+    const users = await this.ownership.usersById(rows.map((r) => r.userId));
+    const items = rows.map((r) => {
+      const u = users.get(r.userId);
+      const first = (u?.first_name ?? '').trim() || 'Member';
+      const initial = (u?.last_name ?? '').trim().charAt(0);
+      return {
+        id: r.id, rating: r.rating, title: r.title, comment: r.comment, status: r.status, createdAt: r.createdAt,
+        authorName: initial ? `${first} ${initial.toUpperCase()}.` : first,
+      };
+    });
+    return { items, total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) };
+  }
 
   // ── Registration ────────────────────────────────────────────────────────
 
@@ -103,13 +138,21 @@ export class ProviderPortalService {
     const [category] = await this.catalog.findBySlugs([dto.categorySlug]);
     if (!category) throw new BadRequestException('Choose a valid business category.');
 
+    // One Aurora identity per email: never create a second account. The person proves they own
+    // the existing one by signing in, then registers the business (POST provider-portal/onboard).
     const existing = await this.userRepo.findOne({ where: { email: dto.email }, select: { id: true, is_email_verified: true, is_deleted: true } });
     if (existing && !existing.is_deleted) {
-      throw new ConflictException(
-        existing.is_email_verified
-          ? 'An Aurora account already uses this email. Sign in to add your business to it.'
-          : 'This email is registered but not verified yet. Check your inbox for the verification email.',
-      );
+      throw new ConflictException(existing.is_email_verified
+        ? {
+          statusCode: 409,
+          code: 'ACCOUNT_EXISTS',
+          message: 'An Aurora account already exists with this email address. Please sign in to continue registering your business.',
+        }
+        : {
+          statusCode: 409,
+          code: 'ACCOUNT_NOT_VERIFIED',
+          message: 'This email is registered but not verified yet. Verify it, then sign in to continue registering your business.',
+        });
     }
 
     const role = (await this.roleRepo.findOne({ where: { name: 'registered' } }))
@@ -117,6 +160,7 @@ export class ProviderPortalService {
     if (!role) throw new BadRequestException('Registration is not available right now.');
 
     const code = String(randomInt(100000, 1000000));
+    const zone = resolveUserZone(dto.timezone);
     const now = new Date();
     const user = await this.userRepo.save(this.userRepo.create({
       id: uuidv4(),
@@ -132,34 +176,21 @@ export class ProviderPortalService {
       created_at: now,
       created_at_utc: now,
       verification_code: code,
-      verification_code_expiry: new Date(Date.now() + 30 * 60 * 1000),
+      // Wall-clock time in the registering user's own timezone (stored alongside it).
+      timezone: zone,
+      verification_code_expiry: wallClockAfterMinutes(VERIFY_LINK_MINUTES, zone) as unknown as Date,
       is_email_verified: false,
       is_active: 0,
     } as Partial<User>));
 
     // Draft listing owned by the new account (not visible until submitted + approved).
-    const listing = await this.admin.create({
-      displayName: dto.businessName,
-      businessName: dto.businessName,
-      categorySlugs: [category.slug],
-      phone: dto.mobile,
-      email: dto.email,
-      locations: [],
-    } as CreateProviderDto, user.id);
-    await this.dataSource.transaction(async (m) => {
-      await m.update(DiscoveryProvider, { id: listing.id }, {
-        listingStatus: ListingStatus.DRAFT,
-        managementType: ManagementType.PROVIDER_MANAGED,
-        userId: user.id,
-        createdBy: user.id,
-      });
-      await this.ownership.addMember(m, listing.id, user.id, ProviderMemberRole.OWNER, user.id);
-    });
+    // Owning it grants the PROVIDER role (DiscoveryOwnershipService.addMember).
+    const listing = await this.createOwnedDraft(user.id, dto.businessName, category.slug, dto.mobile, dto.email);
 
     await this.email.sendEmail({
       to: user.email,
       subject: 'Aurora Discover - Verify your business account',
-      html: verifyEmailTemplate(code, user.id, dto.firstName, `${frontendBase}/providers`),
+      html: verifyEmailTemplate(code, user.id, dto.firstName, frontendBase),
       history: { emailType: EmailType.EMAIL_VERIFICATION, fromUserId: user.id, toUserId: user.id, createdBy: user.id },
     });
     this.auditEmitter.emit({
@@ -173,6 +204,80 @@ export class ProviderPortalService {
     return { message: 'Account created. Check your email for a verification link.', email: user.email };
   }
 
+  /** Creates a DRAFT, provider-managed listing owned by `userId` (→ PROVIDER role, same transaction). */
+  private async createOwnedDraft(userId: string, businessName: string, categorySlug: string, phone: string | null, email: string | null) {
+    const listing = await this.admin.create({
+      displayName: businessName,
+      businessName,
+      categorySlugs: [categorySlug],
+      phone,
+      email,
+      locations: [],
+    } as CreateProviderDto, userId);
+    await this.dataSource.transaction(async (m) => {
+      await m.update(DiscoveryProvider, { id: listing.id }, {
+        listingStatus: ListingStatus.DRAFT,
+        managementType: ManagementType.PROVIDER_MANAGED,
+        userId,
+        createdBy: userId,
+      });
+      await this.ownership.addMember(m, listing.id, userId, ProviderMemberRole.OWNER, userId);
+    });
+    return listing;
+  }
+
+  /**
+   * "Register your business" for an existing, signed-in Aurora account (e.g. a
+   * matrimony member). The sign-in already proved ownership of the account, so no
+   * new user is created: we add a draft listing they own, which grants PROVIDER.
+   * The listing still needs admin approval before it's published.
+   */
+  async onboard(userId: string, dto: ProviderOnboardDto): Promise<{ listingId: string; roles: AccountRole[] }> {
+    const [category] = await this.catalog.findBySlugs([dto.categorySlug]);
+    if (!category) throw new BadRequestException('Choose a valid business category.');
+    const user = await this.userRepo.findOne({
+      where: { id: userId, is_deleted: false },
+      select: { id: true, email: true, mobile: true, is_email_verified: true, is_active: true },
+    });
+    if (!user || !user.is_email_verified) throw new ForbiddenException('Verify your email address before registering a business.');
+
+    const listing = await this.createOwnedDraft(userId, dto.businessName, category.slug, dto.phone ?? user.mobile ?? null, user.email);
+    this.auditEmitter.emit({
+      eventType: AuditEventType.DISCOVERY_PROVIDER_ACCOUNT_CREATED,
+      entityType: AuditEntityType.DISCOVERY_PROVIDER,
+      entityId: listing.id,
+      userId,
+      newValue: { businessName: dto.businessName, category: category.slug, country: dto.country, existingAccount: true },
+      description: 'Existing Aurora account registered a business via For Providers',
+    });
+    return { listingId: listing.id, roles: (await this.accountRoles?.rolesOf(userId)) ?? [] };
+  }
+
+  /**
+   * Sends a fresh verification link to an unverified account (provider or
+   * member) — used when the first link expired or got lost. The answer is the
+   * same whether or not the email exists, to avoid account enumeration.
+   */
+  async resendVerification(dto: ResendProviderVerificationDto, frontendBase: string): Promise<{ message: string }> {
+    const generic = { message: 'If this email belongs to an account that still needs verifying, we’ve sent a new verification link. It is valid for 30 minutes.' };
+    const user = await this.userRepo.findOne({ where: { email: dto.email, is_deleted: false } });
+    if (!user || user.is_email_verified) return generic;
+
+    user.timezone = resolveUserZone(dto.timezone || user.timezone);
+    user.verification_code = String(randomInt(100000, 1000000));
+    user.verification_code_expiry = wallClockAfterMinutes(VERIFY_LINK_MINUTES, user.timezone) as unknown as Date;
+    user.updated_at = new Date();
+    await this.userRepo.save(user);
+
+    await this.email.sendEmail({
+      to: user.email,
+      subject: 'Aurora Discover - Verify your business account',
+      html: verifyEmailTemplate(user.verification_code, user.id, user.first_name, frontendBase),
+      history: { emailType: EmailType.EMAIL_VERIFICATION, fromUserId: user.id, toUserId: user.id, createdBy: user.id },
+    });
+    return generic;
+  }
+
   // ── Dashboard ───────────────────────────────────────────────────────────
 
   async me(userId: string) {
@@ -183,6 +288,7 @@ export class ProviderPortalService {
     const memberships = await this.ownership.membershipsOf(userId);
     const listings = await this.summaries(memberships.map((m) => m.providerId), new Map(memberships.map((m) => [m.providerId, m.role])));
     const claims = await this.ownership.myClaims(userId);
+    const roles = (await this.accountRoles?.rolesOf(userId)) ?? [];
     return {
       user: {
         id: user?.id ?? userId,
@@ -190,7 +296,10 @@ export class ProviderPortalService {
         lastName: user?.last_name ?? null,
         email: user?.email ?? '',
         accountType: user?.account_type ?? AccountType.MEMBER,
+        roles,
       },
+      /** Has the PROVIDER or PROVIDER_STAFF application role (may use the business dashboard). */
+      isProvider: hasAnyRole(roles, PROVIDER_APP_ROLES),
       listings,
       claims,
     };
@@ -205,6 +314,17 @@ export class ProviderPortalService {
     });
     const media = await this.mediaRepo.find({ where: { providerId: In(ids) }, select: { providerId: true } });
     const withMedia = new Set(media.map((m) => m.providerId));
+    // Real aggregates only (no fabricated stats): how many members saved each listing; pending reviews.
+    const countBy = async (repo: Repository<any> | undefined, extra: string) => {
+      if (!repo) return new Map<string, number>();
+      const raw: { pid: string; n: string }[] = await repo.createQueryBuilder('x')
+        .select('x.provider_id', 'pid').addSelect('COUNT(*)', 'n')
+        .where(`x.provider_id IN (:...ids)${extra}`, { ids, pending: 'PENDING' })
+        .groupBy('x.provider_id').getRawMany();
+      return new Map(raw.map((r) => [r.pid, Number(r.n)]));
+    };
+    const saved = await countBy(this.favoriteRepo, '');
+    const pendingReviews = await countBy(this.reviewRepo, ' AND x.status = :pending');
     return rows.map((p) => {
       const locs = (p.locations ?? []).filter((l) => l.isActive);
       const primary = locs.find((l) => l.isPrimary) ?? locs[0];
@@ -223,6 +343,8 @@ export class ProviderPortalService {
         ratingAvg: p.ratingAvg,
         ratingCount: p.ratingCount,
         checklist: this.checklist(p, locs.length, (p.services ?? []).filter((s) => s.isActive).length, withMedia.has(p.id) || !!p.photoUrl),
+        savedCount: saved.get(p.id) ?? 0,
+        pendingReviewCount: pendingReviews.get(p.id) ?? 0,
         updatedAt: p.updatedAt,
       };
     });

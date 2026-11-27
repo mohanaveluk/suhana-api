@@ -92,11 +92,52 @@ describe('ProviderPortalService', () => {
     expect(ownership.addMember).toHaveBeenCalledWith(expect.anything(), 'new', 'u1', 'OWNER', 'u1');
   });
 
-  it('registration refuses an email that already has an account (sign in instead)', async () => {
+  const registration = {
+    businessName: 'B', firstName: 'A', email: 'a@b.c', mobile: '+1 555 0100', password: 'abc12345',
+    categorySlug: 'wedding-planner', country: 'US',
+  };
+
+  // ── One Aurora identity: no duplicate accounts ───────────────────────────
+  it('registration with an existing email never creates a second account — sign in to continue', async () => {
     userRepo.findOne.mockResolvedValue({ id: 'u5', is_email_verified: true, is_deleted: false });
-    await expect(svc.register({
-      businessName: 'B', firstName: 'A', email: 'a@b.c', mobile: '+1 555 0100', password: 'abc12345',
-      categorySlug: 'wedding-planner', country: 'US',
-    }, 'http://localhost:4200')).rejects.toBeInstanceOf(ConflictException);
+    userRepo.save = jest.fn();
+    userRepo.create = jest.fn();
+    const err = await svc.register(registration, 'http://localhost:4300').catch((e) => e);
+    expect(err).toBeInstanceOf(ConflictException);
+    expect(err.getResponse()).toMatchObject({
+      code: 'ACCOUNT_EXISTS',
+      message: 'An Aurora account already exists with this email address. Please sign in to continue registering your business.',
+    });
+    expect(userRepo.create).not.toHaveBeenCalled();
+    expect(userRepo.save).not.toHaveBeenCalled();
+    expect(admin.create).not.toHaveBeenCalled();
+  });
+
+  it('an existing unverified email is pointed at verification, not duplicated', async () => {
+    userRepo.findOne.mockResolvedValue({ id: 'u6', is_email_verified: false, is_deleted: false });
+    userRepo.save = jest.fn();
+    const err = await svc.register(registration, 'http://localhost:4300').catch((e) => e);
+    expect(err.getResponse()).toMatchObject({ code: 'ACCOUNT_NOT_VERIFIED' });
+    expect(userRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('a signed-in member registering a business reuses their account and becomes its owner (→ PROVIDER)', async () => {
+    userRepo.findOne.mockResolvedValue({ id: 'm1', email: 'm@x.com', mobile: '+91 98400 12345', is_email_verified: true, is_active: 1 });
+    userRepo.save = jest.fn();
+    userRepo.create = jest.fn();
+    const res = await svc.onboard('m1', { businessName: 'Lotus Hall', categorySlug: 'wedding-planner', country: 'IN' });
+    expect(res.listingId).toBe('new');
+    expect(userRepo.create).not.toHaveBeenCalled(); // no new user
+    expect(userRepo.save).not.toHaveBeenCalled();
+    expect(admin.create).toHaveBeenCalledWith(expect.objectContaining({ displayName: 'Lotus Hall', email: 'm@x.com' }), 'm1');
+    // Owning the listing is what grants PROVIDER (DiscoveryOwnershipService.addMember).
+    expect(ownership.addMember).toHaveBeenCalledWith(expect.anything(), 'new', 'm1', ProviderMemberRole.OWNER, 'm1');
+  });
+
+  it('onboarding is refused for an unverified account', async () => {
+    userRepo.findOne.mockResolvedValue({ id: 'm2', is_email_verified: false });
+    await expect(svc.onboard('m2', { businessName: 'X', categorySlug: 'wedding-planner', country: 'IN' }))
+      .rejects.toBeInstanceOf(ForbiddenException);
+    expect(admin.create).not.toHaveBeenCalled();
   });
 });

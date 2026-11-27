@@ -3,6 +3,7 @@ import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { AppRolesGuard } from 'src/common/guards/app-roles.guard';
 import { AdminDiscoveryController } from './admin-discovery.controller';
 import { DiscoveryController } from './discovery.controller';
 import { ProviderPortalController } from './provider-portal.controller';
@@ -41,13 +42,14 @@ describe('Aurora Discover authorization', () => {
     expect(Reflect.getMetadata(GUARDS_METADATA, DiscoveryController)).toEqual([JwtAuthGuard]);
   });
 
-  it('provider portal requires a JWT everywhere except registration and the category list', () => {
-    expect(Reflect.getMetadata(GUARDS_METADATA, ProviderPortalController)).toEqual([JwtAuthGuard]);
+  it('provider portal requires a JWT (+ app-role check) everywhere except registration, resend and the category list', () => {
+    expect(Reflect.getMetadata(GUARDS_METADATA, ProviderPortalController)).toEqual([JwtAuthGuard, AppRolesGuard]);
     const isPublic = (name: keyof ProviderPortalController) =>
       Reflect.getMetadata(IS_PUBLIC_KEY, ProviderPortalController.prototype[name]) === true;
     expect(isPublic('register')).toBe(true);
     expect(isPublic('categories')).toBe(true);
-    for (const name of ['me', 'createListing', 'getListing', 'updateListing', 'submit', 'createClaim', 'uploadMedia'] as const) {
+    expect(isPublic('resendVerification')).toBe(true);
+    for (const name of ['me', 'onboard', 'createListing', 'getListing', 'updateListing', 'submit', 'createClaim', 'uploadMedia'] as const) {
       expect(isPublic(name)).toBe(false);
     }
   });

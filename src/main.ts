@@ -50,8 +50,22 @@ async function bootstrap() {
   
 
   // Configure CORS
+  // Two web apps share this API: Aurora Matrimony (members) and Aurora for Providers.
+  // Set CORS_ALLOWED_ORIGINS to a comma-separated allow-list in each environment, e.g.
+  //   https://www.auroramatrimony.com,https://providers.auroramatrimony.com
+  // Unset = previous behaviour (reflect any origin) so existing deployments keep working.
+  // Auth uses Bearer tokens (not cookies), so sessions are never shared between the two sites.
+  const corsAllowList = (process.env.CORS_ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((o) => o.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+  if (!corsAllowList.length) {
+    console.warn('[cors] CORS_ALLOWED_ORIGINS is not set — reflecting any origin. Set it in production.');
+  }
   app.enableCors({
-    origin: true, // This allows requests from any origin
+    origin: corsAllowList.length
+      ? (origin, cb) => cb(null, !origin || corsAllowList.includes(origin))
+      : true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],

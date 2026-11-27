@@ -47,4 +47,10 @@ export class ResendEmailDto {
   )
   @IsOptional()
   email?: string;
+
+  @ApiProperty({ example: 'Asia/Kolkata', required: false, description: 'IANA timezone of the requesting browser; the link expiry is stored in this zone.' })
+  @IsOptional()
+  @IsString()
+  @Length(1, 64)
+  timezone?: string;
 }

@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { RefreshToken } from '../user/entity/refresh-token.entity';
 import { User } from '../user/entity/user.entity';
-import { identity } from 'rxjs';
+import { AccountRolesService } from '../account-roles/account-roles.service';
 
 
 @Injectable()
@@ -14,6 +14,7 @@ export class TokenService {
     private jwtService: JwtService,
     @InjectRepository(RefreshToken)
     private refreshTokenRepository: Repository<RefreshToken>,
+    private readonly accountRoles: AccountRolesService,
   ) {}
 
   async generateTokens(user: User, userRole: any) {
@@ -25,7 +26,12 @@ export class TokenService {
         first_name: user.first_name,
         last_name: user.last_name,
         username: user.first_name + ' ' + user.last_name,
+        // Where the account was first created — informational. Authorisation uses the
+        // application roles read from the DB per request (never trusted from the token).
+        accountType: user.account_type ?? 'MEMBER',
       };
+    const roles = await this.accountRoles.effectiveRoles(
+      user, typeof userRole === 'string' ? userRole : (userRole?.name ?? undefined));
 
     const accessToken = this.jwtService.sign(payload);
     /*const accessToken = this.jwtService.sign(payload, {
@@ -57,7 +63,11 @@ export class TokenService {
         updated_at: user.updated_at,
         last_active: user.last_active,
         temp_guid: user.temp_guid,
-      } 
+        accountType: user.account_type ?? 'MEMBER',
+        // Application roles: MEMBER, PROVIDER, PROVIDER_STAFF, ADMIN, SUPER_ADMIN. Each web app checks
+        // its own after sign-in (Aurora Matrimony: MEMBER; Aurora for Providers: PROVIDER / PROVIDER_STAFF).
+        roles,
+      }
     };
   }
 
@@ -96,6 +106,7 @@ export class TokenService {
         email: token.user.email,
         firstName: token.user.first_name,
         lastName: token.user.last_name,
+        accountType: token.user.account_type ?? 'MEMBER',
       };
 
     const newAccessToken = this.jwtService.sign(payload);
@@ -106,6 +117,8 @@ export class TokenService {
 
     return {
       access_token: newAccessToken,
+      // Current roles, so a web app notices a role granted since sign-in.
+      roles: await this.accountRoles.effectiveRoles(token.user),
     };
   }
 

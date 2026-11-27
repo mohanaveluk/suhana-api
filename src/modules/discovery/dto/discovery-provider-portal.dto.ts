@@ -46,6 +46,40 @@ export class ProviderRegisterDto {
   @ApiProperty({ enum: SUPPORTED_COUNTRY_CODES })
   @Transform(upper) @IsIn(SUPPORTED_COUNTRY_CODES)
   country: string;
+
+  @ApiPropertyOptional({ example: 'Asia/Kolkata', description: 'Browser IANA timezone; the verification-link expiry is stored in this zone.' })
+  @IsOptional() @Transform(trim) @IsString() @MaxLength(64)
+  timezone?: string;
+}
+
+/** "Register your business" for an existing, signed-in Aurora account (no new user is created). */
+export class ProviderOnboardDto {
+  @ApiProperty({ example: 'Shaandaar Events' })
+  @Transform(trim) @IsString() @IsNotEmpty() @MaxLength(150)
+  businessName: string;
+
+  @ApiProperty({ example: 'wedding-planner' })
+  @IsString() @IsNotEmpty() @MaxLength(64)
+  categorySlug: string;
+
+  @ApiProperty({ enum: SUPPORTED_COUNTRY_CODES })
+  @Transform(upper) @IsIn(SUPPORTED_COUNTRY_CODES)
+  country: string;
+
+  @ApiPropertyOptional({ example: '+91 98400 12345', description: 'Business phone; defaults to the account’s mobile.' })
+  @IsOptional() @Transform(emptyToNull) @Matches(/^\+?[0-9 ()-]{7,24}$/, { message: 'phone must be a valid phone number' })
+  phone?: string | null;
+}
+
+/** Ask for a new email-verification link (expired or lost). Always answers generically. */
+export class ResendProviderVerificationDto {
+  @ApiProperty()
+  @Transform(lower) @IsEmail() @MaxLength(255)
+  email: string;
+
+  @ApiPropertyOptional({ example: 'Asia/Kolkata' })
+  @IsOptional() @Transform(trim) @IsString() @MaxLength(64)
+  timezone?: string;
 }
 
 export class CreateClaimDto {

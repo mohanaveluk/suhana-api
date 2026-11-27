@@ -19,6 +19,7 @@ import { AstrologerCategoryHandler } from './categories/astrologer-category.hand
 import { GenericCategoryHandler } from './categories/generic-category.handler';
 import { MemberThrottlerGuard } from './controllers/member-throttler.guard';
 import { ProviderPortalController } from './controllers/provider-portal.controller';
+import { PublicDiscoveryController } from './controllers/public-discovery.controller';
 import { DiscoveryOwnershipService } from './services/discovery-ownership.service';
 import { ProviderPortalService } from './services/provider-portal.service';
 import { User } from '../user/entity/user.entity';
@@ -35,7 +36,7 @@ import { EmailModule } from '../../shared/email/email.module';
  */
 @Module({
   imports: [TypeOrmModule.forFeature([...DISCOVERY_ENTITIES, User, RoleEntity]), AuditModule, EmailModule],
-  controllers: [DiscoveryController, AdminDiscoveryController, ProviderPortalController],
+  controllers: [DiscoveryController, AdminDiscoveryController, ProviderPortalController, PublicDiscoveryController],
   providers: [
     DiscoveryCatalogService,
     DiscoverySearchService,

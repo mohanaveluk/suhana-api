@@ -44,6 +44,7 @@ import { ProfileVisitsModule } from './modules/profile-visits/profile-visits.mod
 import { MemberInteractionsModule } from './modules/member-interactions/member-interactions.module';
 import { PersonalityModule } from './modules/personality/personality.module';
 import { DiscoveryModule } from './modules/discovery/discovery.module';
+import { AccountRolesModule } from './modules/account-roles/account-roles.module';
 
 const envFilePath = process.env.NODE_ENV === 'production'
   ? '.env'
@@ -65,6 +66,7 @@ const envFilePath = process.env.NODE_ENV === 'production'
     EventEmitterModule.forRoot(),
     CommonModule,
     LogModule,
+    AccountRolesModule,
     AuthModule,
     HealthModule,
     AuditModule,

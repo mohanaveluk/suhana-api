@@ -1,4 +1,6 @@
-import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { ALLOW_PROVIDER_ACCOUNTS_KEY } from '../decorators/allow-provider-accounts.decorator';
+import { MEMBER_APP_ROLES, hasAnyRole } from 'src/modules/account-roles/account-role.enum';
 import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
@@ -43,7 +45,26 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       }
       throw new UnauthorizedException(Constants.AUTH.UN_AUTHORIZED);
     }
-    return (await super.canActivate(context)) as boolean;
+    const ok = (await super.canActivate(context)) as boolean;
+
+    // Member routes are the default. An account with no member-app role (MEMBER /
+    // ADMIN / SUPER_ADMIN) — i.e. a business-only account — may only use routes that
+    // opt in with @AllowProviderAccounts(). request.user comes from
+    // JwtStrategy.validate, which reads the roles from the DB on every request.
+    if (ok && !hasAnyRole(request.user?.roles, MEMBER_APP_ROLES)) {
+      const allowed = this.reflector.getAllAndOverride<boolean>(ALLOW_PROVIDER_ACCOUNTS_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ]);
+      if (!allowed) {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'MEMBER_ROLE_REQUIRED',
+          message: 'Your Aurora account doesn’t have a matrimony profile yet. Create your profile to use Aurora Matrimony.',
+        });
+      }
+    }
+    return ok;
     //return true;
 
   }

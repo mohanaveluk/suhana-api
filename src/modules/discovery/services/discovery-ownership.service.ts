@@ -1,5 +1,5 @@
 import {
-  BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException,
+  BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, Optional,
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
@@ -16,6 +16,8 @@ import {
 import { AuditEmitter } from '../../audit/audit.emitter';
 import { AuditEventType } from '../../audit/enums/audit-event-type.enum';
 import { AuditEntityType } from '../../audit/enums/audit-entity-type.enum';
+import { AccountRolesService } from '../../account-roles/account-roles.service';
+import { AccountRole, AccountRoleSource } from '../../account-roles/account-role.enum';
 
 interface UserRow {
   id: string;
@@ -63,6 +65,7 @@ export class DiscoveryOwnershipService {
     @InjectRepository(DiscoveryProviderMember) private readonly memberRepo: Repository<DiscoveryProviderMember>,
     @InjectRepository(DiscoveryListingClaim) private readonly claimRepo: Repository<DiscoveryListingClaim>,
     private readonly auditEmitter: AuditEmitter,
+    @Optional() private readonly accountRoles?: AccountRolesService,
   ) {}
 
   // ── Users ───────────────────────────────────────────────────────────────
@@ -99,9 +102,19 @@ export class DiscoveryOwnershipService {
     const existing = await repo.findOne({ where: { providerId, userId } });
     if (existing) {
       if (existing.role !== role && role === ProviderMemberRole.OWNER) await repo.update({ providerId, userId }, { role });
-      return;
+    } else {
+      await repo.save(repo.create({ providerId, userId, role, createdBy: by }));
     }
-    await repo.save(repo.create({ providerId, userId, role, createdBy: by }));
+    // Managing a listing = access to Aurora for Providers: OWNER → PROVIDER, STAFF → PROVIDER_STAFF.
+    // Same transaction, so a rolled-back registration/claim never leaves a stray role behind.
+    // (Roles are not revoked when a membership ends — the account stays a provider account.)
+    await this.accountRoles?.grant(
+      userId,
+      role === ProviderMemberRole.OWNER ? AccountRole.PROVIDER : AccountRole.PROVIDER_STAFF,
+      AccountRoleSource.LISTING_MEMBERSHIP,
+      by,
+      m,
+    );
   }
 
   membershipsOf(userId: string): Promise<DiscoveryProviderMember[]> {
