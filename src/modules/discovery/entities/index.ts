@@ -10,16 +10,18 @@ import { DiscoveryFavorite } from './discovery-favorite.entity';
 import { DiscoveryReview } from './discovery-review.entity';
 import { GeoPostalCode } from './geo-postal-code.entity';
 import { DiscoveryServiceDetail } from './discovery-service-detail.entity';
+import { DiscoveryProviderMember } from './discovery-provider-member.entity';
+import { DiscoveryListingClaim } from './discovery-listing-claim.entity';
 
 export {
   DiscoveryCategory, DiscoveryProvider, DiscoveryProviderCategory, DiscoveryLocation, DiscoveryService,
   DiscoveryProviderLanguage, DiscoveryProviderMedia, DiscoveryAstrologerDetail, DiscoveryFavorite,
-  DiscoveryReview, GeoPostalCode, DiscoveryServiceDetail,
+  DiscoveryReview, GeoPostalCode, DiscoveryServiceDetail, DiscoveryProviderMember, DiscoveryListingClaim,
 };
 export type { BusinessHoursEntry, CertificationEntry } from './discovery-astrologer-detail.entity';
 
 export const DISCOVERY_ENTITIES = [
   DiscoveryCategory, DiscoveryProvider, DiscoveryProviderCategory, DiscoveryLocation, DiscoveryService,
   DiscoveryProviderLanguage, DiscoveryProviderMedia, DiscoveryAstrologerDetail, DiscoveryFavorite,
-  DiscoveryReview, GeoPostalCode, DiscoveryServiceDetail,
+  DiscoveryReview, GeoPostalCode, DiscoveryServiceDetail, DiscoveryProviderMember, DiscoveryListingClaim,
 ];

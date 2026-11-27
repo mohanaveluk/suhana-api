@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, BadRequestException, NotFoundException, InternalServerErrorException, HttpException, GoneException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, NotFoundException, InternalServerErrorException, HttpException, GoneException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -41,6 +41,10 @@ import { EmailType } from '../email-history/entity/email-history.entity';
 import { MoreThanOrEqual } from 'typeorm';
 import { OtpDeliveryService } from 'src/shared/otp/otp-delivery.service';
 import { OTP_MAX_ATTEMPTS, OTP_RESEND_MAX, OTP_RESEND_WINDOW_MINUTES, generateOtp, otpTtlMinutes } from 'src/shared/otp/otp-policy';
+import { isWallClockPast, resolveUserZone, wallClockAfterMinutes } from 'src/shared/utils/user-time.util';
+import { AccountRolesService } from '../account-roles/account-roles.service';
+import { AccountRole, AccountRoleSource, AppTarget } from '../account-roles/account-role.enum';
+import { JoinAsMemberDto } from './dto/join-as-member.dto';
 
 
 @Injectable()
@@ -71,6 +75,7 @@ export class AuthService {
     private userLoginHistoryService: UserLoginHistoryService,
     private logger: CustomLoggerService,
     private otpDelivery: OtpDeliveryService,
+    private readonly accountRoles: AccountRolesService,
   ) {}
 
   async register(registerDto: RegisterDto, domain: string) : Promise<Record<string, any>> {
@@ -98,7 +103,10 @@ export class AuthService {
 
       const hashedPassword = await bcrypt.hash(registerDto.password, 10);
       const verificationCode = this.generateOTC();
-      const verificationCodeExpiry = await this.dateService.addMinutesToCurrentDateTimeInUTC(15); // 15 minutes from now
+      // 15 minutes from now, as wall-clock time in the registering user's own timezone.
+      const userZone = resolveUserZone(registerDto.timezone);
+      registerDto.timezone = userZone;
+      const verificationCodeExpiry = wallClockAfterMinutes(15, userZone) as unknown as Date;
 
       const profileCode = await this.generateUniqueProfileCode();
 
@@ -154,6 +162,8 @@ export class AuthService {
       }));
 
       const savedUser = await this.userRepository.save(user);
+      // Member registration (Aurora Matrimony) grants the MEMBER application role.
+      await this.accountRoles.grant(savedUser.id, AccountRole.MEMBER, AccountRoleSource.MEMBER_REGISTRATION, savedUser.id);
       const token = await this.tokenService.generateTokens(savedUser, userRole);
 
       // Send verification email
@@ -238,15 +248,13 @@ export class AuthService {
       return { message: 'Email already verified' };
     }
 
-    // check if the updatedat or createdAt os greater than 15 mins then return expired code message
-    const referenceTime = user.verification_code_expiry;
-    if (referenceTime < new Date(await this.dateService.getCurrentDateTimeInUTC())) {
+    // The expiry is stored as wall-clock time in the user's own timezone (users.timezone).
+    if (isWallClockPast(user.verification_code_expiry, user.timezone)) {
       throw new HttpException('Verification code has expired. Please request a new verification mail.', 410);
     }
 
-    if (!user.verification_code || 
-        user.verification_code !== verifyEmailDto.code ||
-        new Date() > user.verification_code_expiry) {
+    if (!user.verification_code ||
+        user.verification_code !== verifyEmailDto.code) {
       throw new BadRequestException('Invalid or expired verification code');
     }
 
@@ -295,9 +303,10 @@ export class AuthService {
 
     if (!user.is_email_verified) {
       // Generate new verification code if needed
-      if (!user.verification_code || new Date() > user.verification_code_expiry) {
+      if (!user.verification_code || isWallClockPast(user.verification_code_expiry, user.timezone)) {
         const verificationCode = this.generateOTC();
-        const verificationCodeExpiry = new Date(Date.now() + 30 * 60 * 1000);
+        user.timezone = resolveUserZone(user.timezone);
+        const verificationCodeExpiry = wallClockAfterMinutes(30, user.timezone) as unknown as Date;
 
         user.verification_code = verificationCode;
         user.verification_code_expiry = verificationCodeExpiry;
@@ -708,8 +717,9 @@ export class AuthService {
         return { message: 'If your email is registered, you will receive verification code' };
       }
       const verificationCode = this.generateOTC();
-      const verificationCodeExpiry = new Date(Date.now() + 15 * 60 * 1000);
-      
+      user.timezone = resolveUserZone(user.timezone);
+      const verificationCodeExpiry = wallClockAfterMinutes(15, user.timezone) as unknown as Date;
+
       user.verification_code = verificationCode;
       user.verification_code_expiry = verificationCodeExpiry;
       await this.userRepository.save(user);
@@ -752,7 +762,9 @@ export class AuthService {
       }
 
       const verificationCode = this.generateOTC();
-      const verificationCodeExpiry = new Date(await this.dateService.addMinutesToCurrentDateTimeInUTC(15)); // 15 minutes from now
+      // 15 minutes from now in the user's own timezone (a valid zone sent with the request wins).
+      user.timezone = resolveUserZone(resendEmailDto.timezone || user.timezone);
+      const verificationCodeExpiry = wallClockAfterMinutes(15, user.timezone) as unknown as Date;
       user.verification_code = verificationCode;
       user.verification_code_expiry = verificationCodeExpiry;
       user.updated_at = new Date(await this.dateService.getCurrentDateTime());
@@ -1038,6 +1050,64 @@ export class AuthService {
       }
       throw new InternalServerErrorException('Failed to update user status');
     }
+  }
+
+  /**
+   * An existing, signed-in account without the MEMBER role (e.g. registered on
+   * Aurora for Providers) joins Aurora Matrimony with the same identity: no new
+   * user is created. Signing in proved ownership; the email must be verified.
+   * Creates the matrimony profile shell if there isn't one, sets gender and
+   * grants MEMBER. The wizard then saves the details via PATCH /profiles/me.
+   * Idempotent: an account that is already a member just gets its roles back.
+   */
+  /** "Switch Aurora experience": a 60-second single-use code for the other web app. */
+  createHandoff(userId: string, target: AppTarget) {
+    return this.accountRoles.createHandoff(userId, target);
+  }
+
+  /**
+   * Burns a handoff code and signs the user in to `target` with a fresh session
+   * (same response shape as /auth/login). Tokens are never put in URLs — only the
+   * short-lived code is, and it works once.
+   */
+  async exchangeHandoff(code: string, target: AppTarget) {
+    const user = await this.accountRoles.consumeHandoff(code, target);
+    this.logger.debug(`Handoff sign-in for user ${user.id} → ${target}`);
+    return { data: await this.tokenService.generateTokens(user, user.role ? user.role.name : '') };
+  }
+
+  async joinAsMember(userId: string, dto: JoinAsMemberDto): Promise<{ roles: AccountRole[]; tempGuid: string | null }> {
+    const user = await this.userRepository.findOne({ where: { id: userId, is_deleted: false }, relations: ['profile'] });
+    if (!user) throw new NotFoundException('Account not found');
+    if (!user.is_email_verified) throw new ForbiddenException('Verify your email address before creating a matrimony profile.');
+
+    const current = await this.accountRoles.rolesOf(userId);
+    if (current.includes(AccountRole.MEMBER)) return { roles: current, tempGuid: user.temp_guid ?? null };
+
+    user.gender = dto.gender as any;
+    if (dto.firstName?.trim()) user.first_name = dto.firstName.trim();
+    if (dto.lastName?.trim()) user.last_name = dto.lastName.trim();
+    if (!user.profile) {
+      user.profile = this.profileRepo.create({
+        firstName: user.first_name,
+        lastName: user.last_name,
+        gender: dto.gender as any,
+        age: 0,
+        religion: '',
+        motherTongue: '',
+        city: '',
+        state: '',
+        educationLevel: '',
+        occupationTitle: '',
+        status: 'pending',
+        profileCode: await this.generateUniqueProfileCode(),
+      });
+    }
+    user.temp_guid = user.temp_guid ?? uuidv4();
+    user.updated_at = new Date();
+    await this.userRepository.save(user);
+    await this.accountRoles.grant(userId, AccountRole.MEMBER, AccountRoleSource.MEMBER_JOIN, userId);
+    return { roles: await this.accountRoles.rolesOf(userId), tempGuid: user.temp_guid };
   }
 
   async generateUniqueProfileCode(): Promise<string> {

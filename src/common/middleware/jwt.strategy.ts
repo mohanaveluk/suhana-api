@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { InjectRepository } from '@nestjs/typeorm';
-import { use } from 'passport';
+import { AccountRolesService } from 'src/modules/account-roles/account-roles.service';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { RoleEntity } from 'src/modules/user/entity/roles.entity';
 import { User } from 'src/modules/user/entity/user.entity';
@@ -15,7 +15,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @InjectRepository(RoleEntity)
-    private roleRepository: Repository<RoleEntity>
+    private roleRepository: Repository<RoleEntity>,
+    private readonly accountRoles: AccountRolesService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -46,7 +47,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       id: user.id,
       firstName: user.first_name,
       lastName: user.last_name,
-      role: role !== null && role !== undefined ? role.name : ''
+      role: role !== null && role !== undefined ? role.name : '',
+      // Where the account was first created (MEMBER | PROVIDER) — informational only.
+      accountType: user.account_type ?? 'MEMBER',
+      // Application roles, read from the DB on every request so grants/revokes apply at once.
+      // JwtAuthGuard / AppRolesGuard authorise with these (MEMBER, PROVIDER, PROVIDER_STAFF, ADMIN…).
+      roles: await this.accountRoles.effectiveRoles(user, role?.name ?? null),
     };
   }
 }

@@ -18,6 +18,13 @@ import { CategoryHandlerRegistry } from './categories/category-handler.registry'
 import { AstrologerCategoryHandler } from './categories/astrologer-category.handler';
 import { GenericCategoryHandler } from './categories/generic-category.handler';
 import { MemberThrottlerGuard } from './controllers/member-throttler.guard';
+import { ProviderPortalController } from './controllers/provider-portal.controller';
+import { PublicDiscoveryController } from './controllers/public-discovery.controller';
+import { DiscoveryOwnershipService } from './services/discovery-ownership.service';
+import { ProviderPortalService } from './services/provider-portal.service';
+import { User } from '../user/entity/user.entity';
+import { RoleEntity } from '../user/entity/roles.entity';
+import { EmailModule } from '../../shared/email/email.module';
 
 /**
  * Aurora Discover — category-driven local services directory.
@@ -28,8 +35,8 @@ import { MemberThrottlerGuard } from './controllers/member-throttler.guard';
  * geocoder later without touching search.
  */
 @Module({
-  imports: [TypeOrmModule.forFeature(DISCOVERY_ENTITIES), AuditModule],
-  controllers: [DiscoveryController, AdminDiscoveryController],
+  imports: [TypeOrmModule.forFeature([...DISCOVERY_ENTITIES, User, RoleEntity]), AuditModule, EmailModule],
+  controllers: [DiscoveryController, AdminDiscoveryController, ProviderPortalController, PublicDiscoveryController],
   providers: [
     DiscoveryCatalogService,
     DiscoverySearchService,
@@ -44,6 +51,8 @@ import { MemberThrottlerGuard } from './controllers/member-throttler.guard';
     GenericCategoryHandler,
     CloudStorageService,
     MemberThrottlerGuard,
+    DiscoveryOwnershipService,
+    ProviderPortalService,
   ],
   exports: [DiscoverySearchService],
 })

@@ -7,7 +7,9 @@ import {
 import {
   ASTROLOGER_SPECIALIZATIONS, DISCOVERY_LANGUAGES, SUPPORTED_COUNTRY_CODES, WEEK_DAYS,
 } from '../constants/discovery.constants';
-import { ConsultationMode, DiscoveryReviewStatus, ProviderVerificationStatus } from '../constants/discovery.enums';
+import {
+  ConsultationMode, DiscoveryReviewStatus, ListingStatus, ManagementType, ProviderVerificationStatus,
+} from '../constants/discovery.enums';
 import { toStringArray } from './discovery-search.dto';
 
 const upper = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim().toUpperCase() : value);
@@ -265,6 +267,14 @@ export class AdminProviderQueryDto {
   @ApiPropertyOptional({ enum: SUPPORTED_COUNTRY_CODES })
   @IsOptional() @Transform(upper) @IsIn(SUPPORTED_COUNTRY_CODES)
   country?: string;
+
+  @ApiPropertyOptional({ enum: ListingStatus, description: 'e.g. SUBMITTED = provider submissions awaiting review.' })
+  @IsOptional() @IsIn(Object.values(ListingStatus))
+  listingStatus?: ListingStatus;
+
+  @ApiPropertyOptional({ enum: ManagementType })
+  @IsOptional() @IsIn(Object.values(ManagementType))
+  managementType?: ManagementType;
 
   @ApiPropertyOptional({ description: 'Include soft-deleted listings.' })
   @IsOptional() @Transform(({ value }) => value === true || value === 'true') @IsBoolean()

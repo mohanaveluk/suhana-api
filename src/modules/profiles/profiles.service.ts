@@ -1,3 +1,4 @@
+import { resolveUserZone, wallClockAfterMinutes } from 'src/shared/utils/user-time.util';
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
@@ -343,7 +344,9 @@ export class ProfilesService {
       user.updated_at = new Date(await this.dateService.getCurrentDateTime());
 
       user.updated_at_utc = new Date(await this.dateService.getCurrentDateTimeInUTC());
-      user.verification_code_expiry = new Date(await this.dateService.addMinutesToCurrentDateTimeInUTC(15));
+      // Stored as wall-clock time in the user's own timezone (see shared/utils/user-time.util.ts).
+      user.timezone = resolveUserZone(user.timezone);
+      user.verification_code_expiry = wallClockAfterMinutes(15, user.timezone) as unknown as Date;
       user.profile.horoscopeDocUrl = dto.horoscope?.documentUrl || user.profile.horoscopeDocUrl;
 
       // Voice introduction: only changed when the key is actually present, so an

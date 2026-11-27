@@ -1,5 +1,7 @@
 import { EARTH_RADIUS_KM } from '../constants/discovery.constants';
-import { DiscoverySort, ProviderVerificationStatus, HIDDEN_VERIFICATION_STATUSES } from '../constants/discovery.enums';
+import {
+  DiscoverySort, ListingStatus, ProviderVerificationStatus, HIDDEN_VERIFICATION_STATUSES,
+} from '../constants/discovery.enums';
 import { boundingBox, LatLng } from '../geo/geo.util';
 import {
   DISTANCE_REFERENCE_KM, EXPERIENCE_CAP_YEARS, RATING_PRIOR_MEAN, RATING_PRIOR_WEIGHT, RECOMMENDED_WEIGHTS,
@@ -72,9 +74,11 @@ export function buildProviderSearchSql(c: ProviderSearchCriteria): ProviderSearc
   const where: string[] = [
     'p.deleted_at IS NULL',
     'p.is_active = 1',
+    // Provider drafts / submissions awaiting review are never public.
+    'p.listing_status = ?',
     `p.verification_status NOT IN (${placeholders(HIDDEN_VERIFICATION_STATUSES.length)})`,
   ];
-  const whereParams: unknown[] = [...HIDDEN_VERIFICATION_STATUSES];
+  const whereParams: unknown[] = [ListingStatus.PUBLISHED, ...HIDDEN_VERIFICATION_STATUSES];
 
   // ── distance ────────────────────────────────────────────────────────────
   let distanceSelect = 'NULL';

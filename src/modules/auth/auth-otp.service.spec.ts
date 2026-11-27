@@ -33,7 +33,7 @@ function setup(user: any, { canDeliver = true, smsResult = { success: true, prov
   const n: any = null;
   const svc = new AuthService(
     userRepo as any, n, n, n, n, tokenRepo as any, loginOtcRepo as any,
-    n, n, tokenService as any, n, n, emailService as any, n, history as any, logger, otpDelivery,
+    n, n, tokenService as any, n, n, emailService as any, n, history as any, logger, otpDelivery, n,
   );
   return { svc, userRepo, loginOtcRepo, tokenRepo, emailService, sms };
 }

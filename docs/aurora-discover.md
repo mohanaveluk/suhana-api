@@ -204,10 +204,75 @@ Until the import is done, ZIP, PIN and city searches return "not found" (or fall
 
 The search SQL was also run against the dev MySQL with the dev sample listings. That run covered PIN, ZIP and ZIP+4, city, unknown city, state, country, device location, filters, every sort and pagination, and REJECTED listings were confirmed hidden.
 
-## 10. Follow-ups
+## 10. Provider portal ("For Providers") and listing ownership
 
-- **Appointment requests**: the statuses were spec'd as pending/confirmed/declined/rescheduled/cancelled/completed. Build them once providers can claim their listings (`user_id`) or once there is an admin relay workflow.
-- **Provider self-service**: claiming and managing a listing using `user_id`.
+Migration `1784334700000-add-discovery-provider-portal`. Frontend: `suhana/src/app/features/provider-portal/` (routes `/providers`, `/providers/register`, `/providers/login`, `/providers/dashboard`, `/providers/claim`).
+
+**One identity, separate entry points.** Providers use the same `user` table, password login, JWT and email verification as members. There is no second auth system:
+- `user.account_type`: `MEMBER` (default, every existing account) or `PROVIDER` (registered via "For Providers").
+- `user.gender` is now NULLable; only provider-only accounts leave it empty. Members still always have it.
+- Permission over a listing comes from **`discovery_provider_members`** (`OWNER` / `STAFF` per listing), not a global role. That lets one person be a bride/groom member *and* own a business on a single login. Admins never need a membership row.
+
+**Listing ownership** (columns on `discovery_providers`; existing rows keep today's behaviour):
+
+| Column | Values | Default for existing / admin-created |
+|---|---|---|
+| `management_type` | `ADMIN_MANAGED`, `PROVIDER_MANAGED` | `ADMIN_MANAGED` |
+| `listing_status` | `DRAFT`, `SUBMITTED`, `CHANGES_REQUESTED`, `PUBLISHED` | `PUBLISHED` |
+| `review_note` | admin → provider message | null |
+| `submitted_at` | when last submitted | null |
+
+The other ownership fields were deliberately not duplicated:
+- `created_by` already records who created the listing.
+- `user_id` already holds the primary owner.
+- The claim status is derived from `discovery_listing_claims`.
+
+**Only `PUBLISHED` listings are public** (search SQL and `isProviderVisible`), on top of the existing active / not-deleted / not-rejected-or-suspended rules.
+
+**Flows**
+- **Admin create/edit (unchanged).** Admin-created listings are `ADMIN_MANAGED` and `PUBLISHED` immediately; no provider account is needed. Admins can edit, verify, suspend, delete and restore every listing, whatever its management type.
+- **Provider registration** (`POST provider-portal/register`, public, 5 requests/min):
+  - Creates an unverified `PROVIDER` account and a `DRAFT` listing it owns.
+  - Emails a verification link to `{FRONTEND_URL or Origin}/providers/auth/verifyemail/:id/:code`. The existing verify-email template and endpoint are reused.
+  - An email that already has an account (a member included) gets a 409 telling them to sign in and add the business from the dashboard instead.
+- **Building a listing.** The provider edits it through `provider-portal/listings/:id` (same form as the admin editor). The service rejects changes a provider isn't allowed to make:
+  - `isActive` is dropped;
+  - certifications can't be self-verified (flags an admin already set survive unchanged entries);
+  - the listing photo must be one of the listing's own uploads.
+- **Submitting.** `POST …/submit` requires a category, a location, a description of 40+ characters and one contact method; it moves the listing to `SUBMITTED`.
+- **Admin review** (`POST admin/discovery/providers/:id/review`):
+  - `PUBLISH` → `PUBLISHED`;
+  - `REQUEST_CHANGES` (note required) → `CHANGES_REQUESTED`;
+  - `REJECT` (note required) → `CHANGES_REQUESTED` with verification `REJECTED`.
+
+  Published provider listings can keep being edited and changes go live at once (see follow-ups).
+- **Claim this business.**
+  - **Request.** `POST provider-portal/claims` targets a published, `ADMIN_MANAGED` listing with no owner. It is pending only and grants **no access**.
+  - **Approve.** `PATCH admin/discovery/claims/:id` with `APPROVED` makes the claimant `OWNER` and the listing `PROVIDER_MANAGED`, and auto-rejects competing claims.
+  - **Reject.** Needs a note; the listing doesn't change.
+  - **Member link.** Member detail responses carry `claimable` to show the "Claim this listing" link.
+- **Admin control** (`POST admin/discovery/providers/:id/management`):
+  - `ADMIN_MANAGED` takes the listing over and removes all provider access.
+  - `PROVIDER_MANAGED` + `ownerEmail` assigns a verified account as owner.
+
+**Security**
+- **Ownership checks.** Every `provider-portal/listings/:id…` call goes through `DiscoveryOwnershipService.assertCanManage` (403 otherwise), so a provider can never touch another provider's listing.
+- **Admin-only endpoints.** Review, claims and management stay behind `JwtAuthGuard + RolesGuard + @Roles('admin')`.
+- **Audit.** New events: `DISCOVERY_PROVIDER_ACCOUNT_CREATED`, `DISCOVERY_LISTING_SUBMITTED`, `DISCOVERY_LISTING_REVIEWED`, `DISCOVERY_CLAIM_SUBMITTED`, `DISCOVERY_CLAIM_DECIDED`, `DISCOVERY_MANAGEMENT_CHANGED`.
+
+**Verified:**
+- Unit specs: `discovery-ownership.service.spec`, `provider-portal.service.spec`, and the authorization spec extended to the new endpoints. All 147 Discover tests pass.
+- An end-to-end run of the real services against dev MySQL passed 18/18 checks: register, draft hidden, submit, publish, ZIP search, IDOR 403, claim, approve, take over, and the unchanged admin create path.
+
+## 11. Follow-ups
+
+- **Provider portal next steps**:
+  - Staff invitations (the `STAFF` role exists in the schema and guards, but there's no UI yet).
+  - Mobile verification for provider accounts.
+  - Email notifications to providers and admins on submit, review and claim decisions (today they see it on their dashboard / admin tabs).
+  - Optional re-review of edits to already-published provider listings.
+  - Enquiries, appointments and analytics (shown as "Coming soon" on the dashboard).
+- **Appointment requests**: the statuses were spec'd as pending/confirmed/declined/rescheduled/cancelled/completed. Providers can now own listings, so requests have someone to go to.
 - **Review eligibility**: today any member can submit one moderated review per listing. Tie this to completed appointments once those exist, and mark those reviews as "verified consultation".
 - **Map view** (§8). Optional location autocomplete in the search box, using `geo_postal_codes`.
 - **Next categories**: marriage halls (capacity, venue type), photographers (portfolio), and the other handlers, then products for wedding shopping.

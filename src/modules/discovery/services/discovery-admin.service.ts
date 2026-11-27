@@ -20,6 +20,8 @@ import { DiscoveryCatalogService } from './discovery-catalog.service';
 import { LocationResolverService } from '../geo/location-resolver.service';
 import { GEOCODING_PROVIDER, GeocodeResult, GeocodingProvider } from '../geo/geocoding.provider';
 import { CloudStorageService } from '../../../common/services/cloud-storage.service';
+import { DiscoveryOwnershipService } from './discovery-ownership.service';
+import { ListingOwnershipDto } from '../dto/discovery-provider-portal.dto';
 import { AuditEmitter } from '../../audit/audit.emitter';
 import { AuditEventType } from '../../audit/enums/audit-event-type.enum';
 import { AuditEntityType } from '../../audit/enums/audit-entity-type.enum';
@@ -42,7 +44,7 @@ export interface AdminLocationDto {
   isActive: boolean;
 }
 
-export interface AdminProviderDto {
+export interface AdminProviderDto extends Partial<ListingOwnershipDto> {
   id: string;
   userId: string | null;
   displayName: string;
@@ -74,7 +76,7 @@ export interface AdminProviderDto {
   geocoding?: Array<{ city: string; source: GeocodeSource }>;
 }
 
-export interface AdminProviderSummaryDto {
+export interface AdminProviderSummaryDto extends Partial<ListingOwnershipDto> {
   id: string;
   displayName: string;
   businessName: string | null;
@@ -112,6 +114,7 @@ export class DiscoveryAdminService {
     @Inject(GEOCODING_PROVIDER) private readonly geocoder: GeocodingProvider,
     private readonly storage: CloudStorageService,
     private readonly auditEmitter: AuditEmitter,
+    private readonly ownership?: DiscoveryOwnershipService,
   ) {}
 
   // ── Read ────────────────────────────────────────────────────────────────
@@ -126,6 +129,8 @@ export class DiscoveryAdminService {
       qb.andWhere('(p.display_name LIKE :like OR p.business_name LIKE :like OR p.email LIKE :like OR p.phone LIKE :like)', { like });
     }
     if (q.status) qb.andWhere('p.verification_status = :status', { status: q.status });
+    if (q.listingStatus) qb.andWhere('p.listing_status = :listingStatus', { listingStatus: q.listingStatus });
+    if (q.managementType) qb.andWhere('p.management_type = :managementType', { managementType: q.managementType });
     if (q.category) {
       qb.andWhere(
         'EXISTS (SELECT 1 FROM discovery_provider_categories pc INNER JOIN discovery_categories c ON c.id = pc.category_id WHERE pc.provider_id = p.id AND c.slug = :cat)',
@@ -148,6 +153,7 @@ export class DiscoveryAdminService {
         })
       : [];
     const byId = new Map(full.map((p) => [p.id, p]));
+    const owned = this.ownership ? await this.ownership.ownershipFor(full) : new Map<string, ListingOwnershipDto>();
     const items: AdminProviderSummaryDto[] = rows.map((r) => {
       const p = byId.get(r.id) ?? r;
       const locs = p.locations ?? [];
@@ -166,6 +172,7 @@ export class DiscoveryAdminService {
         ratingCount: p.ratingCount,
         updatedAt: p.updatedAt,
         deletedAt: p.deletedAt ?? null,
+        ...(owned.get(p.id) ?? {}),
       };
     });
     return { items, total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) };
@@ -179,6 +186,7 @@ export class DiscoveryAdminService {
     });
     if (!p) throw new NotFoundException('Listing not found');
     const media = await this.mediaRepo.find({ where: { providerId: id }, order: { displayOrder: 'ASC', createdAt: 'ASC' } });
+    const ownership = this.ownership ? (await this.ownership.ownershipFor([p])).get(p.id) : undefined;
 
     const slugs = (p.categories ?? [])
       .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary))
@@ -234,6 +242,7 @@ export class DiscoveryAdminService {
         })),
       media: media.map((m) => ({ id: m.id, url: m.url, caption: m.caption, displayOrder: m.displayOrder })),
       ...extras,
+      ...(ownership ?? {}),
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
       deletedAt: p.deletedAt ?? null,

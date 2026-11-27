@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { DistanceUnit } from '../constants/discovery.constants';
 import {
-  ConsultationMode, HIDDEN_VERIFICATION_STATUSES, ProviderVerificationStatus,
+  ConsultationMode, HIDDEN_VERIFICATION_STATUSES, ListingStatus, ManagementType, ProviderVerificationStatus,
 } from '../constants/discovery.enums';
 import { DiscoveryProvider } from '../entities/discovery-provider.entity';
 import { DiscoveryLocation } from '../entities/discovery-location.entity';
@@ -27,9 +27,13 @@ export interface PresentOptions {
 const sameText = (a: string | null | undefined, b: string | null | undefined) =>
   (a ?? '').trim().toLowerCase() === (b ?? '').trim().toLowerCase();
 
-/** Visible to members = active, not deleted, not rejected/suspended. */
-export function isProviderVisible(p: Pick<DiscoveryProvider, 'isActive' | 'deletedAt' | 'verificationStatus'> | null): boolean {
-  return !!p && p.isActive && !p.deletedAt && !HIDDEN_VERIFICATION_STATUSES.includes(p.verificationStatus);
+/** Visible to members = active, published, not deleted, not rejected/suspended. */
+export function isProviderVisible(
+  p: Pick<DiscoveryProvider, 'isActive' | 'deletedAt' | 'verificationStatus'> & { listingStatus?: ListingStatus } | null,
+): boolean {
+  return !!p && p.isActive && !p.deletedAt && !HIDDEN_VERIFICATION_STATUSES.includes(p.verificationStatus)
+    // Rows loaded before the column existed (or mocks) count as published.
+    && (p.listingStatus === undefined || p.listingStatus === ListingStatus.PUBLISHED);
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -209,6 +213,8 @@ export class ProviderPresenterService {
       serviceDetail: null,
       ...handler.toDetailExtras(details.get(p.id)),
       contactChannels: { phone: !!p.phone, email: !!p.email, website: !!p.website },
+      // Admin-maintained listings with no owner can be claimed by the real business.
+      claimable: p.managementType !== ManagementType.PROVIDER_MANAGED && !p.userId,
     };
   }
 }

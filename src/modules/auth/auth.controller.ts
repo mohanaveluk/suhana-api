@@ -1,3 +1,4 @@
+import { AllowProviderAccounts } from 'src/common/decorators/allow-provider-accounts.decorator';
 import { 
   Controller, 
   Post, 
@@ -25,6 +26,9 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { maxFileSize } from 'src/shared/utils/file-validation.util';
 import { Request as ExpRequest } from 'express';
 import { AuthService } from './auth.service';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { JoinAsMemberDto } from './dto/join-as-member.dto';
+import { CreateHandoffDto, ExchangeHandoffDto } from './dto/handoff.dto';
 import { Public } from 'src/common/decorators/public.decorator';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { UpdateProfileDto } from '../user/dto/update-profile.dto';
@@ -254,8 +258,48 @@ export class AuthController {
     return this.authService.updatePassword_legacy(req.user.id, updatePasswordDto);
   }
 
+  // ── One Aurora identity, several apps ──────────────────────────────────────
+
+  @Post('join-as-member')
+  @UseGuards(JwtAuthGuard)
+  @AllowProviderAccounts() // a business-only account becomes a member here
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Join Aurora Matrimony with the signed-in account',
+    description: 'For an existing verified account without the MEMBER role (e.g. registered on Aurora for Providers). Creates the profile shell and grants MEMBER; no new user. Save the profile details with PATCH /profiles/me afterwards.',
+  })
+  joinAsMember(@Request() req, @Body() dto: JoinAsMemberDto) {
+    return this.authService.joinAsMember(req.user.id, dto);
+  }
+
+  @Post('handoff')
+  @UseGuards(JwtAuthGuard)
+  @AllowProviderAccounts()
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Switch Aurora experience: get a one-time code for the other web app',
+    description: 'Returns a 60-second, single-use code. The caller must hold a role for the target (matrimony: MEMBER/ADMIN; providers: PROVIDER/PROVIDER_STAFF).',
+  })
+  createHandoff(@Request() req, @Body() dto: CreateHandoffDto) {
+    return this.authService.createHandoff(req.user.id, dto.target);
+  }
+
+  @Post('handoff/exchange')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Exchange a handoff code for a session in this web app (burns the code)' })
+  @ApiResponse({ status: 401, description: 'Invalid, used or expired code — sign in normally' })
+  exchangeHandoff(@Body() dto: ExchangeHandoffDto) {
+    return this.authService.exchangeHandoff(dto.code, dto.target);
+  }
+
   @Post('logout')
   @UseGuards(JwtAuthGuard)
+  @AllowProviderAccounts() // Aurora for Providers signs out through the same endpoint.
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'User logout' })
   @ApiResponse({ status: 200, description: 'Logout successful' })
